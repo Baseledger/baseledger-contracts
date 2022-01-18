@@ -1,4 +1,1 @@
-
-export async function verifyContracts(): Promise<void> {
-  
-}
+export async function verifyContracts(): Promise<void> {}

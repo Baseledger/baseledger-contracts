@@ -1,5 +1,1 @@
-
-export async function deployContracts() {
-  
-  
-}
+export async function deployContracts() {}

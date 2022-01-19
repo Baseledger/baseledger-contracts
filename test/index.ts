@@ -5,7 +5,7 @@ import { ContractFactory } from "@ethersproject/contracts";
 import { tenTokens, zeroAddress, shares, getTimestamp } from "./utils";
 import { Signer } from "ethers";
 
-describe.only("UBTSplitter contract tests", () => {
+describe("UBTSplitter contract tests", () => {
   let UBTContract: UBTSplitter;
   let mockERC20: UBTMock;
   let UBTAddress: string;

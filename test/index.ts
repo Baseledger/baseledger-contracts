@@ -57,7 +57,7 @@ describe.only("UBTSplitter contract tests", () => {
       expect(await UBTContract.addPayee(validator1Address, shares.fifty))
         .to.emit(UBTContract, "PayeeAdded")
         .withArgs(validator1Address, shares.fifty, timestamp);
-      expect(await UBTContract.payee(0)).to.equal(validator1Address);
+      expect(await UBTContract.payees(0)).to.equal(validator1Address);
       expect(await UBTContract.shares(validator1Address)).to.equal(
         shares.fifty
       );
@@ -113,8 +113,8 @@ describe.only("UBTSplitter contract tests", () => {
       expect(await UBTContract.updatePayee(validator1Address, shares.hundred))
         .to.emit(UBTContract, "PayeeUpdated")
         .withArgs(validator1Address, shares.hundred, timestamp);
-      expect(await UBTContract.payee(0)).to.equal(validator1Address);
-      expect(await UBTContract.payee(1)).to.equal(validator2Address);
+      expect(await UBTContract.payees(0)).to.equal(validator1Address);
+      expect(await UBTContract.payees(1)).to.equal(validator2Address);
       expect(await UBTContract.shares(validator1Address)).to.equal(
         shares.hundred
       );

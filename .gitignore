@@ -1,0 +1,22 @@
+node_modules
+
+# Buidler files
+cache
+artifacts
+abi
+/typechain
+
+# Coverage
+coverage
+coverage.json
+
+# Env settings
+.env*
+
+
+#Local settings
+local/
+
+# IDE settings
+typechain/
+

@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
 /**
  * @title UBTSplitter
@@ -102,17 +101,9 @@ contract UBTSplitter is Context, Ownable {
         uint256 totalReceived,
         uint256 alreadyReleased
     ) private view returns (uint256) {
-        console.log("Pending Payment Function:");
-        console.log("Total Received: ", totalReceived);
-        console.log("Shares: ", shares[account]);
-        console.log("total shares: ", totalShares);
-        console.log("alreadyReleased: ", alreadyReleased);
         uint256 formula = (totalReceived * shares[account]) /
             totalShares -
             alreadyReleased;
-
-        console.log("totalShares: ", totalShares);
-        console.log("formula: ", formula);
         return formula;
     }
 

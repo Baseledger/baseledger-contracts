@@ -2,20 +2,13 @@ import hre, { ethers } from "hardhat";
 import { expect } from "chai";
 import { UBTSplitter, UBTMock } from "../typechain";
 import { ContractFactory } from "@ethersproject/contracts";
-import {
-  oneEther,
-  tenTokens,
-  zeroAddress,
-  shares,
-  getTimestamp,
-} from "./utils";
+import { tenTokens, zeroAddress, shares, getTimestamp } from "./utils";
 import { Signer } from "ethers";
 
 describe.only("UBTSplitter contract tests", () => {
   let UBTContract: UBTSplitter;
   let mockERC20: UBTMock;
   let UBTAddress: string;
-  let mockERC20Address: string;
   let accounts;
   let validator1Address: string;
   let validator2Address: string;
@@ -39,7 +32,6 @@ describe.only("UBTSplitter contract tests", () => {
     await UBTContract.deployed();
     await mockERC20.deployed();
     UBTAddress = UBTContract.address;
-    mockERC20Address = mockERC20.address;
     await mockERC20.transfer(UBTAddress, tenTokens);
   });
 
@@ -106,9 +98,9 @@ describe.only("UBTSplitter contract tests", () => {
     beforeEach(async () => {
       await UBTContract.addPayee(validator1Address, shares.fifty);
       await UBTContract.addPayee(validator2Address, shares.fifty);
-    })
+    });
     it("Should update validator with share", async () => {
-      const timestamp = (await getTimestamp()) +1;
+      const timestamp = (await getTimestamp()) + 1;
 
       expect(await UBTContract.updatePayee(validator1Address, shares.hundred))
         .to.emit(UBTContract, "PayeeUpdated")
@@ -131,7 +123,7 @@ describe.only("UBTSplitter contract tests", () => {
     });
 
     it("Should update validator with zero share", async () => {
-      await UBTContract.updatePayee(validator1Address, shares.zero)
+      await UBTContract.updatePayee(validator1Address, shares.zero);
       expect(await UBTContract.shares(validator1Address)).to.equal(shares.zero);
     });
 

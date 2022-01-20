@@ -153,7 +153,7 @@ describe("UBTSplitter contract tests", () => {
     });
   });
 
-  context.only("For release funds for validators", async () => {
+  context("For release funds for validators", async () => {
     beforeEach(async () => {
       await UBTContract.addPayee(validator1Address, shares.fifty);
       await UBTContract.addPayee(validator2Address, shares.fifty);
@@ -189,6 +189,12 @@ describe("UBTSplitter contract tests", () => {
       expect(await UBTContract.erc20TotalReleased(mockERC20Address)).to.equal(
         fiveTokens.add(onePointSixInPeriodTokens)
       );
+    });
+
+    it("Should emit event, when release function is called", async () => {
+      expect(await UBTContract.release(mockERC20Address, validator1Address))
+        .to.emit(UBTContract, "ERC20PaymentReleased")
+        .withArgs(mockERC20Address, validator1Address, fiveTokens);
     });
 
     it("Should fail on try to release on validator without share", async () => {

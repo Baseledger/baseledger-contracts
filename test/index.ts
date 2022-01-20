@@ -2,13 +2,22 @@ import hre, { ethers } from "hardhat";
 import { expect } from "chai";
 import { UBTSplitter, UBTMock } from "../typechain";
 import { ContractFactory } from "@ethersproject/contracts";
-import { tenTokens, zeroAddress, shares, getTimestamp } from "./utils";
+import {
+  tenTokens,
+  zeroAddress,
+  shares,
+  getTimestamp,
+  fiveTokens,
+  threePointThreeInPeriodTokens,
+  onePointSixInPeriodTokens,
+} from "./utils";
 import { Signer } from "ethers";
 
 describe("UBTSplitter contract tests", () => {
   let UBTContract: UBTSplitter;
   let mockERC20: UBTMock;
   let UBTAddress: string;
+  let mockERC20Address: string;
   let accounts;
   let validator1Address: string;
   let validator2Address: string;
@@ -32,6 +41,7 @@ describe("UBTSplitter contract tests", () => {
     await UBTContract.deployed();
     await mockERC20.deployed();
     UBTAddress = UBTContract.address;
+    mockERC20Address = mockERC20.address;
     await mockERC20.transfer(UBTAddress, tenTokens);
   });
 
@@ -140,6 +150,65 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
+  context("For release funds for validators", async () => {
+    beforeEach(async () => {
+      await UBTContract.addPayee(validator1Address, shares.fifty);
+      await UBTContract.addPayee(validator2Address, shares.fifty);
+    });
+
+    it("Should release amount of tokens based on share with equal shares", async () => {
+      await UBTContract.release(mockERC20Address, validator1Address);
+      await UBTContract.release(mockERC20Address, validator2Address);
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, validator1Address)
+      ).to.equal(fiveTokens);
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, validator2Address)
+      ).to.equal(fiveTokens);
+    });
+
+    it("Should update share and release the right amount of tokens", async () => {
+      await UBTContract.updatePayee(validator1Address, shares.twentyFive);
+      await UBTContract.release(mockERC20Address, validator1Address);
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, validator1Address)
+      ).to.equal(threePointThreeInPeriodTokens);
+    });
+
+    it("Should release token, update share, send new token amount and then release right amount of tokens", async () => {
+      await UBTContract.release(mockERC20Address, validator1Address);
+      await mockERC20.transfer(UBTAddress, tenTokens);
+      await UBTContract.updatePayee(validator1Address, shares.twentyFive);
+      await UBTContract.release(mockERC20Address, validator1Address);
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, validator1Address)
+      ).to.equal(fiveTokens.add(onePointSixInPeriodTokens));
+      expect(await UBTContract.erc20TotalReleased(mockERC20Address)).to.equal(
+        fiveTokens.add(onePointSixInPeriodTokens)
+      );
+    });
+
+    it("Should emit event, when release function is called", async () => {
+      expect(await UBTContract.release(mockERC20Address, validator1Address))
+        .to.emit(UBTContract, "ERC20PaymentReleased")
+        .withArgs(mockERC20Address, validator1Address, fiveTokens);
+    });
+
+    it("Should fail on try to release on validator without share", async () => {
+      await UBTContract.updatePayee(validator1Address, shares.zero);
+      await expect(
+        UBTContract.release(mockERC20Address, validator1Address)
+      ).to.be.revertedWith("UBTSplitter: account has no shares");
+    });
+
+    it("Should fail on try to release on validator without due payment", async () => {
+      await UBTContract.release(mockERC20Address, validator1Address);
+      await expect(
+        UBTContract.release(mockERC20Address, validator1Address)
+      ).to.be.revertedWith("UBTSplitter: account is not due payment");
     });
   });
 });

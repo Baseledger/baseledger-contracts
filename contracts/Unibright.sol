@@ -60,6 +60,17 @@ contract UBTSplitter is Context, Ownable {
     }
 
     /**
+     * @dev Modifier for checking for zero address
+     */
+    modifier zeroAddress(address token) {
+       require(
+            token != address(0),
+            "UBTSplitter: Address is zero address"
+        );
+        _;
+    }
+
+    /**
      * @dev Triggers a transfer to `account` of the amount of `token` tokens they are owed, according to their
      * percentage of the total shares and their previous withdrawals. `token` must be the address of an IERC20
      * contract.
@@ -103,18 +114,11 @@ contract UBTSplitter is Context, Ownable {
 
     /**
      * @dev Add a new payee to the contract.
-     * @param revenueAddress The address of the payee to add.
+     * @param revenueAddress The revenue address.
+     * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
      */
-    function addPayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner {
-        require(
-            revenueAddress != address(0),
-            "UBTSplitter: revenueAddress is the zero address"
-        );
-        require(
-            stakingAddress != address(0),
-            "UBTSplitter: stakingAddress is the zero address"
-        );
+    function addPayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
         require(shares_ > 0, "UBTSplitter: shares are 0");
         require(
             shares[revenueAddress] == 0,
@@ -131,18 +135,11 @@ contract UBTSplitter is Context, Ownable {
 
     /**
      * @dev Add a new payee to the contract.
-     * @param revenueAddress The address of the payee to add.
+     * @param revenueAddress The revenue address.
+     * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
      */
-    function updatePayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner {
-        require(
-            revenueAddress != address(0),
-            "UBTSplitter: revenueAddress is the zero address"
-        );
-         require(
-            stakingAddress != address(0),
-            "UBTSplitter: stakingAddress is the zero address"
-        );
+    function updatePayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
 
         totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
         
@@ -153,11 +150,7 @@ contract UBTSplitter is Context, Ownable {
         emit PayeeUpdated(revenueAddress, stakingAddress, shares_, block.timestamp);
     }
 
-    function setWhitelistedToken(address token, bool isWhitelisted) public onlyOwner {
-        require(
-            token != address(0),
-            "UBTSplitter: token is the zero address"
-        );
+    function setWhitelistedToken(address token, bool isWhitelisted) public onlyOwner zeroAddress(token) {
        require (token.isContract(), "UBTSplitter: not contract address");
        whitelistedTokens[token] = isWhitelisted;
        emit WhitelistTokenUpdated(msg.sender, token, isWhitelisted);

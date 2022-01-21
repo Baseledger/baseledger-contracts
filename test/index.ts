@@ -58,16 +58,18 @@ describe("UBTSplitter contract tests", () => {
     it("Should add validator with share", async () => {
       const timestamp = (await getTimestamp()) + 1;
 
-      expect(await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty))
+      expect(
+        await UBTContract.addPayee(
+          revenue1Address,
+          stakingAddress,
+          shares.fifty
+        )
+      )
         .to.emit(UBTContract, "PayeeAdded")
         .withArgs(revenue1Address, stakingAddress, shares.fifty, timestamp);
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
-      expect(await UBTContract.shares(revenue1Address)).to.equal(
-        shares.fifty
-      );
-      expect(await UBTContract.timestamps(revenue1Address)).to.equal(
-        timestamp
-      );
+      expect(await UBTContract.shares(revenue1Address)).to.equal(shares.fifty);
+      expect(await UBTContract.timestamps(revenue1Address)).to.equal(timestamp);
       expect(await UBTContract.totalShares()).to.equal(shares.fifty);
     });
 
@@ -121,7 +123,13 @@ describe("UBTSplitter contract tests", () => {
     it("Should update validator with share", async () => {
       const timestamp = (await getTimestamp()) + 1;
 
-      expect(await UBTContract.updatePayee(revenue1Address, stakingAddress, shares.hundred))
+      expect(
+        await UBTContract.updatePayee(
+          revenue1Address,
+          stakingAddress,
+          shares.hundred
+        )
+      )
         .to.emit(UBTContract, "PayeeUpdated")
         .withArgs(revenue1Address, stakingAddress, shares.hundred, timestamp);
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
@@ -129,20 +137,30 @@ describe("UBTSplitter contract tests", () => {
       expect(await UBTContract.shares(revenue1Address)).to.equal(
         shares.hundred
       );
-      expect(await UBTContract.timestamps(revenue1Address)).to.equal(
-        timestamp
-      );
+      expect(await UBTContract.timestamps(revenue1Address)).to.equal(timestamp);
       expect(await UBTContract.totalShares()).to.equal(shares.hundredFifty);
     });
 
     it("Should update totalShares when second validator added", async () => {
-      await UBTContract.updatePayee(revenue1Address, stakingAddress, shares.hundred);
-      await UBTContract.updatePayee(revenue2Address, stakingAddress, shares.hundred);
+      await UBTContract.updatePayee(
+        revenue1Address,
+        stakingAddress,
+        shares.hundred
+      );
+      await UBTContract.updatePayee(
+        revenue2Address,
+        stakingAddress,
+        shares.hundred
+      );
       expect(await UBTContract.totalShares()).to.equal(shares.twoHundred);
     });
 
     it("Should update validator with zero share", async () => {
-      await UBTContract.updatePayee(revenue1Address, stakingAddress, shares.zero);
+      await UBTContract.updatePayee(
+        revenue1Address,
+        stakingAddress,
+        shares.zero
+      );
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.zero);
     });
 
@@ -187,7 +205,11 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should update share and release the right amount of tokens", async () => {
-      await UBTContract.updatePayee(revenue1Address, stakingAddress, shares.twentyFive);
+      await UBTContract.updatePayee(
+        revenue1Address,
+        stakingAddress,
+        shares.twentyFive
+      );
       await UBTContract.release(mockERC20Address, revenue1Address);
       expect(
         await UBTContract.erc20Released(mockERC20Address, revenue1Address)
@@ -197,7 +219,11 @@ describe("UBTSplitter contract tests", () => {
     it("Should release token, update share, send new token amount and then release right amount of tokens", async () => {
       await UBTContract.release(mockERC20Address, revenue1Address);
       await mockERC20.transfer(UBTAddress, tenTokens);
-      await UBTContract.updatePayee(revenue1Address, stakingAddress, shares.twentyFive);
+      await UBTContract.updatePayee(
+        revenue1Address,
+        stakingAddress,
+        shares.twentyFive
+      );
       await UBTContract.release(mockERC20Address, revenue1Address);
       expect(
         await UBTContract.erc20Released(mockERC20Address, revenue1Address)
@@ -210,11 +236,20 @@ describe("UBTSplitter contract tests", () => {
     it("Should emit event, when release function is called", async () => {
       expect(await UBTContract.release(mockERC20Address, revenue1Address))
         .to.emit(UBTContract, "ERC20PaymentReleased")
-        .withArgs(mockERC20Address, revenue1Address, stakingAddress, fiveTokens);
+        .withArgs(
+          mockERC20Address,
+          revenue1Address,
+          stakingAddress,
+          fiveTokens
+        );
     });
 
     it("Should fail on try to release on validator without share", async () => {
-      await UBTContract.updatePayee(revenue1Address, stakingAddress, shares.zero);
+      await UBTContract.updatePayee(
+        revenue1Address,
+        stakingAddress,
+        shares.zero
+      );
       await expect(
         UBTContract.release(mockERC20Address, revenue1Address)
       ).to.be.revertedWith("UBTSplitter: revenueAddress has no shares");
@@ -232,20 +267,24 @@ describe("UBTSplitter contract tests", () => {
       await expect(
         UBTContract.release(mockERC20Address, revenue1Address)
       ).to.be.revertedWith("UBTSplitter: not whitelisted");
-    })
-
+    });
   });
 
   context("For set whitelisted tokens", async () => {
     it("Should set token address into the whitelist with different statuses", async () => {
-      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.be.true;
+      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
+        true
+      );
       await UBTContract.setWhitelistedToken(mockERC20Address, false);
-      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.be.false;
+      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
+        false
+      );
       expect(await UBTContract.setWhitelistedToken(mockERC20Address, true))
-      .to.emit(UBTContract, "WhitelistTokenUpdated")
-      .withArgs(revenue1Address, mockERC20Address, true);
-      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.be.true;
-      
+        .to.emit(UBTContract, "WhitelistTokenUpdated")
+        .withArgs(revenue1Address, mockERC20Address, true);
+      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
+        true
+      );
     });
 
     it("Should fail on try to set zero address", async () => {
@@ -263,11 +302,10 @@ describe("UBTSplitter contract tests", () => {
     it("Should fail if malicious account tries to set address to whitelist ", async () => {
       await expect(
         UBTContract.connect(maliciousAccount).setWhitelistedToken(
-          mockERC20Address, 
+          mockERC20Address,
           true
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
-  })
-
+  });
 });

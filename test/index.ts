@@ -80,13 +80,13 @@ describe("UBTSplitter contract tests", () => {
     it("Should fail on add validator with zero revenue address", async () => {
       await expect(
         UBTContract.addPayee(zeroAddress, stakingAddress, shares.fifty)
-      ).to.be.revertedWith("UBTSplitter: revenueAddress is the zero address");
+      ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on add validator with zero stakingAddress address", async () => {
       await expect(
         UBTContract.addPayee(revenue1Address, zeroAddress, shares.fifty)
-      ).to.be.revertedWith("UBTSplitter: stakingAddress is the zero address");
+      ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on add validator with zero share", async () => {
@@ -149,13 +149,13 @@ describe("UBTSplitter contract tests", () => {
     it("Should fail on update validator with zero revenue address", async () => {
       await expect(
         UBTContract.updatePayee(zeroAddress, stakingAddress, shares.fifty)
-      ).to.be.revertedWith("UBTSplitter: revenueAddress is the zero address");
+      ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on update validator with zero staking address", async () => {
       await expect(
         UBTContract.updatePayee(revenue1Address, zeroAddress, shares.fifty)
-      ).to.be.revertedWith("UBTSplitter: stakingAddress is the zero address");
+      ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail if malicious account tries to update validator ", async () => {
@@ -237,21 +237,36 @@ describe("UBTSplitter contract tests", () => {
   });
 
   context("For set whitelisted tokens", async () => {
-    it("Should set token address into the whitelist", async () => {
-      await UBTContract.setWhitelistedToken(mockERC20Address, true);
+    it("Should set token address into the whitelist with different statuses", async () => {
       expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.be.true;
+      await UBTContract.setWhitelistedToken(mockERC20Address, false);
+      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.be.false;
+      expect(await UBTContract.setWhitelistedToken(mockERC20Address, true))
+      .to.emit(UBTContract, "WhitelistTokenUpdated")
+      .withArgs(revenue1Address, mockERC20Address, true);
+      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.be.true;
+      
     });
 
     it("Should fail on try to set zero address", async () => {
       await expect(
         UBTContract.setWhitelistedToken(zeroAddress, true)
-      ).to.be.revertedWith("UBTSplitter: token is the zero address");
+      ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on try to set address which is not contract", async () => {
       await expect(
         UBTContract.setWhitelistedToken(revenue1Address, true)
       ).to.be.revertedWith("UBTSplitter: not contract address");
+    });
+
+    it("Should fail if malicious account tries to set address to whitelist ", async () => {
+      await expect(
+        UBTContract.connect(maliciousAccount).setWhitelistedToken(
+          mockERC20Address, 
+          true
+        )
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   })
 

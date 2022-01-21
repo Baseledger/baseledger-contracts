@@ -26,9 +26,23 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract UBTSplitter is Context, Ownable {
     using Address for address;
-    event PayeeAdded(address revenueAddress, address stakingAddress, uint256 shares, uint256 timestamp);
-    event PayeeUpdated(address revenueAddress, address stakingAddress, uint256 shares, uint256 timestamp);
-    event WhitelistTokenUpdated(address triggerredBy, address token, bool isWhitelisted);
+    event PayeeAdded(
+        address revenueAddress,
+        address stakingAddress,
+        uint256 shares,
+        uint256 timestamp
+    );
+    event PayeeUpdated(
+        address revenueAddress,
+        address stakingAddress,
+        uint256 shares,
+        uint256 timestamp
+    );
+    event WhitelistTokenUpdated(
+        address triggerredBy,
+        address token,
+        bool isWhitelisted
+    );
 
     event ERC20PaymentReleased(
         IERC20 indexed token,
@@ -63,10 +77,7 @@ contract UBTSplitter is Context, Ownable {
      * @dev Modifier for checking for zero address
      */
     modifier zeroAddress(address token) {
-       require(
-            token != address(0),
-            "UBTSplitter: Address is zero address"
-        );
+        require(token != address(0), "UBTSplitter: Address is zero address");
         _;
     }
 
@@ -76,12 +87,18 @@ contract UBTSplitter is Context, Ownable {
      * contract.
      */
     function release(IERC20 token, address revenueAddress) public virtual {
-        require(shares[revenueAddress] > 0, "UBTSplitter: revenueAddress has no shares");
+        require(
+            shares[revenueAddress] > 0,
+            "UBTSplitter: revenueAddress has no shares"
+        );
 
-        require(whitelistedTokens[address(token)], "UBTSplitter: not whitelisted");
+        require(
+            whitelistedTokens[address(token)],
+            "UBTSplitter: not whitelisted"
+        );
 
         uint256 totalReceived = token.balanceOf(address(this)) +
-           erc20TotalReleased[token];
+            erc20TotalReleased[token];
         uint256 payment = _pendingPayment(
             revenueAddress,
             totalReceived,
@@ -94,7 +111,12 @@ contract UBTSplitter is Context, Ownable {
         erc20TotalReleased[token] += payment;
 
         SafeERC20.safeTransfer(token, revenueAddress, payment);
-        emit ERC20PaymentReleased(token, revenueAddress, validatorStakingAddress[revenueAddress], payment);
+        emit ERC20PaymentReleased(
+            token,
+            revenueAddress,
+            validatorStakingAddress[revenueAddress],
+            payment
+        );
     }
 
     /**
@@ -118,7 +140,11 @@ contract UBTSplitter is Context, Ownable {
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
      */
-    function addPayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
+    function addPayee(
+        address revenueAddress,
+        address stakingAddress,
+        uint256 shares_
+    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
         require(shares_ > 0, "UBTSplitter: shares are 0");
         require(
             shares[revenueAddress] == 0,
@@ -130,7 +156,12 @@ contract UBTSplitter is Context, Ownable {
         shares[revenueAddress] = shares_;
         timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_;
-        emit PayeeAdded(revenueAddress, stakingAddress, shares_, block.timestamp);
+        emit PayeeAdded(
+            revenueAddress,
+            stakingAddress,
+            shares_,
+            block.timestamp
+        );
     }
 
     /**
@@ -139,20 +170,32 @@ contract UBTSplitter is Context, Ownable {
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
      */
-    function updatePayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
-
+    function updatePayee(
+        address revenueAddress,
+        address stakingAddress,
+        uint256 shares_
+    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
         totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
-        
+
         validatorStakingAddress[revenueAddress] = stakingAddress;
         shares[revenueAddress] = shares_;
         timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_; // add the new share of the account to total shares.
-        emit PayeeUpdated(revenueAddress, stakingAddress, shares_, block.timestamp);
+        emit PayeeUpdated(
+            revenueAddress,
+            stakingAddress,
+            shares_,
+            block.timestamp
+        );
     }
 
-    function setWhitelistedToken(address token, bool isWhitelisted) public onlyOwner zeroAddress(token) {
-       require (token.isContract(), "UBTSplitter: not contract address");
-       whitelistedTokens[token] = isWhitelisted;
-       emit WhitelistTokenUpdated(msg.sender, token, isWhitelisted);
+    function setWhitelistedToken(address token, bool isWhitelisted)
+        public
+        onlyOwner
+        zeroAddress(token)
+    {
+        require(token.isContract(), "UBTSplitter: not contract address");
+        whitelistedTokens[token] = isWhitelisted;
+        emit WhitelistTokenUpdated(msg.sender, token, isWhitelisted);
     }
 }

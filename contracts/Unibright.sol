@@ -25,25 +25,28 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * to run tests before sending real value to this contract.
  */
 contract UBTSplitter is Context, Ownable {
-    event PayeeAdded(address account, uint256 shares, uint256 timestamp);
-    event PayeeUpdated(address account, uint256 shares, uint256 timestamp);
+    using Address for address;
+    event PayeeAdded(address revenueAddress, address stakingAddress, uint256 shares, uint256 timestamp);
+    event PayeeUpdated(address revenueAddress, address stakingAddress, uint256 shares, uint256 timestamp);
+    event WhitelistTokenUpdated(address triggerredBy, address token, bool isWhitelisted);
 
-    event PaymentReleased(address to, uint256 amount);
     event ERC20PaymentReleased(
         IERC20 indexed token,
-        address to,
+        address revenueAddress,
+        address stakingAddress,
         uint256 amount
     );
-    event PaymentReceived(address from, uint256 amount);
 
     uint256 public totalShares;
 
     mapping(address => uint256) public shares;
     mapping(address => uint256) public timestamps;
+    mapping(address => address) public validatorStakingAddress; // revenueAddress => validatorStakingAddress
     address[] public payees;
 
     mapping(IERC20 => uint256) public erc20TotalReleased;
     mapping(IERC20 => mapping(address => uint256)) public erc20Released;
+    mapping(address => bool) public whitelistedTokens;
 
     /**
      * @dev Creates an instance of `UBTSplitter` where each account in `payees` is assigned the number of shares at
@@ -52,19 +55,19 @@ contract UBTSplitter is Context, Ownable {
      * All addresses in `payees` must be non-zero. Both arrays must have the same non-zero length, and there must be no
      * duplicates in `payees`.
      */
-    constructor() {}
+    constructor(address token) {
+        whitelistedTokens[token] = true;
+    }
 
     /**
-     * @dev The Ether received will be logged with {PaymentReceived} events. Note that these events are not fully
-     * reliable: it's possible for a contract to receive Ether without triggering this function. This only affects the
-     * reliability of the events, and not the actual splitting of Ether.
-     *
-     * To learn more about this see the Solidity documentation for
-     * https://solidity.readthedocs.io/en/latest/contracts.html#fallback-function[fallback
-     * functions].
+     * @dev Modifier for checking for zero address
      */
-    receive() external payable virtual {
-        emit PaymentReceived(_msgSender(), msg.value);
+    modifier zeroAddress(address token) {
+       require(
+            token != address(0),
+            "UBTSplitter: Address is zero address"
+        );
+        _;
     }
 
     /**
@@ -72,24 +75,26 @@ contract UBTSplitter is Context, Ownable {
      * percentage of the total shares and their previous withdrawals. `token` must be the address of an IERC20
      * contract.
      */
-    function release(IERC20 token, address account) public virtual {
-        require(shares[account] > 0, "UBTSplitter: account has no shares");
+    function release(IERC20 token, address revenueAddress) public virtual {
+        require(shares[revenueAddress] > 0, "UBTSplitter: revenueAddress has no shares");
+
+        require(whitelistedTokens[address(token)], "UBTSplitter: not whitelisted");
 
         uint256 totalReceived = token.balanceOf(address(this)) +
            erc20TotalReleased[token];
         uint256 payment = _pendingPayment(
-            account,
+            revenueAddress,
             totalReceived,
-            erc20Released[token][account]
+            erc20Released[token][revenueAddress]
         );
 
-        require(payment != 0, "UBTSplitter: account is not due payment");
+        require(payment != 0, "UBTSplitter: revenueAddress is not due payment");
 
-        erc20Released[token][account] += payment;
+        erc20Released[token][revenueAddress] += payment;
         erc20TotalReleased[token] += payment;
 
-        SafeERC20.safeTransfer(token, account, payment);
-        emit ERC20PaymentReleased(token, account, payment);
+        SafeERC20.safeTransfer(token, revenueAddress, payment);
+        emit ERC20PaymentReleased(token, revenueAddress, validatorStakingAddress[revenueAddress], payment);
     }
 
     /**
@@ -109,45 +114,45 @@ contract UBTSplitter is Context, Ownable {
 
     /**
      * @dev Add a new payee to the contract.
-     * @param account The address of the payee to add.
+     * @param revenueAddress The revenue address.
+     * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
      */
-    function addPayee(address account, uint256 shares_) public onlyOwner {
-        require(
-            account != address(0),
-            "UBTSplitter: account is the zero address"
-        );
+    function addPayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
         require(shares_ > 0, "UBTSplitter: shares are 0");
         require(
-            shares[account] == 0,
-            "UBTSplitter: account already has shares"
+            shares[revenueAddress] == 0,
+            "UBTSplitter: revenueAddress already has shares"
         );
 
-        payees.push(account);
-        shares[account] = shares_;
-        timestamps[account] = block.timestamp;
+        payees.push(revenueAddress);
+        validatorStakingAddress[revenueAddress] = stakingAddress;
+        shares[revenueAddress] = shares_;
+        timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_;
-        emit PayeeAdded(account, shares_, block.timestamp);
+        emit PayeeAdded(revenueAddress, stakingAddress, shares_, block.timestamp);
     }
 
     /**
      * @dev Add a new payee to the contract.
-     * @param account The address of the payee to add.
+     * @param revenueAddress The revenue address.
+     * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
      */
-    function updatePayee(address account, uint256 shares_) public onlyOwner {
-        require(
-            account != address(0),
-            "UBTSplitter: account is the zero address"
-        );
-        // TODO Do we need a separate function to remove the share or this should be enough ?
-        // require(shares_ > 0, "UBTSplitter: shares are 0");
+    function updatePayee(address revenueAddress, address stakingAddress, uint256 shares_) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
 
-        totalShares = totalShares - shares[account]; // remove the current share of the account from total shares.
-
-        shares[account] = shares_;
-        timestamps[account] = block.timestamp;
+        totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
+        
+        validatorStakingAddress[revenueAddress] = stakingAddress;
+        shares[revenueAddress] = shares_;
+        timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_; // add the new share of the account to total shares.
-        emit PayeeUpdated(account, shares_, block.timestamp);
+        emit PayeeUpdated(revenueAddress, stakingAddress, shares_, block.timestamp);
+    }
+
+    function setWhitelistedToken(address token, bool isWhitelisted) public onlyOwner zeroAddress(token) {
+       require (token.isContract(), "UBTSplitter: not contract address");
+       whitelistedTokens[token] = isWhitelisted;
+       emit WhitelistTokenUpdated(msg.sender, token, isWhitelisted);
     }
 }

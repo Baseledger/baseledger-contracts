@@ -4,14 +4,20 @@ import { UBTSplitter, UBTMock } from "../typechain";
 import { ContractFactory } from "@ethersproject/contracts";
 import {
   tenTokens,
+  thousandTokens,
+  fiveHundred,
   zeroAddress,
   shares,
   getTimestamp,
+  zeroToken,
   fiveTokens,
   threePointThreeInPeriodTokens,
   onePointSixInPeriodTokens,
+  mnogo,
+  oneToken
 } from "./utils";
 import { Signer } from "ethers";
+import { getJsonWalletAddress } from "ethers/lib/utils";
 
 describe("UBTSplitter contract tests", () => {
   let UBTContract: UBTSplitter;
@@ -23,12 +29,20 @@ describe("UBTSplitter contract tests", () => {
   let revenue2Address: string;
   let stakingAddress: string;
   let maliciousAccount: Signer;
+  let Ogi: string;
+  let tokenSenderAccount: Signer;
+  let tokenSenderAddress: string;
+  let destinationAddress = '0x00f10566dD219F4cFb787858B9909A468131DC0B';
 
   before(async () => {
     accounts = await ethers.getSigners();
     revenue1Address = await accounts[0].getAddress();
     revenue2Address = await accounts[1].getAddress();
     stakingAddress = await accounts[2].getAddress();
+
+    Ogi = await accounts[3].getAddress();
+    tokenSenderAccount = await accounts[7];
+    tokenSenderAddress = await accounts[7].getAddress();
     maliciousAccount = accounts[9];
   });
 
@@ -44,15 +58,61 @@ describe("UBTSplitter contract tests", () => {
     UBTContract = (await UBTFactory.deploy(mockERC20Address)) as UBTSplitter;
     await UBTContract.deployed();
     UBTAddress = UBTContract.address;
-    await mockERC20.transfer(UBTAddress, tenTokens);
+    // Transfer tokens to account which will make a deposit to the contract through deposit 
+    await mockERC20.transfer(tokenSenderAddress, tenTokens);
   });
 
-  context("For transferring proper value of tokens", async () => {
-    it("Should have 10 Tokens", async () => {
-      const contractBalance = await mockERC20.balanceOf(UBTAddress);
-      expect(contractBalance).to.equal(tenTokens);
-    });
-  });
+  context("For deposit function", async () => {
+        it("Should not have any tokens to the contract", async () => {
+        const contractBalance = await mockERC20.balanceOf(UBTAddress);
+        expect(contractBalance).to.equal(zeroToken);
+      });
+
+      it('Should deposit tokens through deposit function, emit deposit event and check balance of contract', async () => {
+        const accountBalance = await mockERC20.balanceOf(tokenSenderAddress);
+        expect(accountBalance).to.equal(tenTokens);
+        const tx = await mockERC20.connect(tokenSenderAccount).approve(UBTAddress, tenTokens)
+        await tx.wait();
+        const allowance = await mockERC20.allowance(tokenSenderAddress, UBTAddress);
+        expect(allowance).to.equal(tenTokens)
+        expect(await UBTContract.connect(tokenSenderAccount).deposit(mockERC20Address, tenTokens, destinationAddress))
+        .to.emit(UBTContract, "ERC20Deposit")
+        .withArgs(
+          tokenSenderAddress,
+          mockERC20Address,
+          tenTokens,
+          destinationAddress
+        );
+        const contractBalance = await mockERC20.balanceOf(UBTAddress);
+        expect(contractBalance).to.equal(tenTokens);
+      });
+
+      it('Should fail on transfer token with zero token address', async () => {
+        await expect(
+            UBTContract.connect(tokenSenderAccount).deposit(zeroAddress, tenTokens, destinationAddress)
+              ).to.be.revertedWith("UBTSplitter: Address is zero address");
+      });
+
+      it('Should fail on transfer token with zero token destination address', async () => {
+        await expect(
+            UBTContract.connect(tokenSenderAccount).deposit(mockERC20Address, tenTokens, zeroAddress)
+              ).to.be.revertedWith("UBTSplitter: Address is zero address");
+      });
+
+      it('Should fail on transfer token which is not whitelisted into the contract', async () => {
+        await UBTContract.setWhitelistedToken(mockERC20Address, false); 
+        await expect(
+            UBTContract.connect(tokenSenderAccount).deposit(mockERC20Address, tenTokens, destinationAddress)
+              ).to.be.revertedWith("UBTSplitter: not whitelisted");
+        await UBTContract.setWhitelistedToken(mockERC20Address, true); 
+      });
+
+      it('Should fail on transfer zero token amount', async () => {
+        await expect(
+            UBTContract.connect(tokenSenderAccount).deposit(mockERC20Address, zeroToken, destinationAddress)
+              ).to.be.revertedWith("UBTSplitter: amount should be grater than zero");
+      });
+  })
 
   context("For adding validators", async () => {
     it("Should add validator with share", async () => {
@@ -191,6 +251,9 @@ describe("UBTSplitter contract tests", () => {
     beforeEach(async () => {
       await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty);
       await UBTContract.addPayee(revenue2Address, stakingAddress, shares.fifty);
+      const tx = await mockERC20.connect(tokenSenderAccount).approve(UBTAddress, tenTokens)
+      await tx.wait();
+      await UBTContract.connect(tokenSenderAccount).deposit(mockERC20Address, tenTokens, destinationAddress);
     });
 
     it("Should release amount of tokens based on share with equal shares", async () => {
@@ -307,5 +370,42 @@ describe("UBTSplitter contract tests", () => {
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
+  });
+
+
+  xcontext("For testing deposit function with a lot of transactions", async () => {
+
+    // it("Should release amount of tokens based on share with equal shares", async () => {
+    //   const tx = await UBTContract.newRelease(mockERC20Address, Ogi)
+    //   const awaitedTx = await tx.wait();
+
+    //     for (const event of awaitedTx.events as Array<any>) {
+    //       if (event.event === "newERC20PaymentReleased") {
+    //         console.log(event)
+    //       }
+    //     }
+    // });
+
+    xit("Should make a lot of transactions to prove that deposit function can revert the contract when too many deposits are made", async () => {
+      let counter = 0;
+      await mockERC20.transfer(tokenSenderAddress, mnogo);
+      const tx = await mockERC20.connect(tokenSenderAccount).approve(UBTAddress, mnogo)
+      await tx.wait();
+        try {
+          for (let index = 0; index < 1000000; index++) {
+            counter = index;
+            console.log(counter);
+            
+            await UBTContract.connect(tokenSenderAccount).deposit(mockERC20Address, oneToken, destinationAddress)
+            const wallet = ethers.Wallet.createRandom();
+            const address = wallet.address;
+            await UBTContract.addPayee(address, stakingAddress, shares.hundred);
+        }
+        } catch(e) {
+          console.log(e)
+        } 
+      console.log(counter);
+    }).timeout(10000000000000000000);
+
   });
 });

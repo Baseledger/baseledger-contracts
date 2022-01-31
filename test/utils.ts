@@ -8,7 +8,6 @@ export const fiveTokens = ethers.utils.parseEther("5");
 export const tenTokens = ethers.utils.parseEther("10");
 export const fiveHundred = ethers.utils.parseEther("500");
 export const thousandTokens = ethers.utils.parseEther("1000");
-export const mnogo = ethers.utils.parseEther("10000")
 
 export const threePointThreeInPeriodTokens = ethers.utils.parseEther(
   "3.333333333333333333"

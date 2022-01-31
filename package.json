@@ -2,7 +2,7 @@
   "name": "hardhat-project",
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "env-cmd --silent -f .env.dev npx hardhat test",
+    "test": "env-cmd --silent -f .env.dev npx hardhat test --network rinkeby",
     "tests:lint": "npx eslint '**/*.{js,ts}'",
     "tests:lint-fix": "npx eslint '**/*.{js,ts}' --fix",
     "contracts:lint": "npx solhint 'contracts/**/*.sol'",

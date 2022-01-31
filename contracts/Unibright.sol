@@ -31,6 +31,7 @@ contract UBTSplitter is Context, Ownable {
         address stakingAddress,
         uint256 shares,
         string baseledgervaloper,
+        uint256 state_lastEventNonce,
         uint256 timestamp
     );
     event PayeeUpdated(
@@ -38,6 +39,7 @@ contract UBTSplitter is Context, Ownable {
         address stakingAddress,
         uint256 shares,
         string baseledgervaloper,
+        uint256 state_lastEventNonce,
         uint256 timestamp
     );
     event WhitelistTokenUpdated(
@@ -58,7 +60,7 @@ contract UBTSplitter is Context, Ownable {
         address token,
         uint256 tokenAmount,
         uint256 state_lastEventNonce,
-        address destinationAddress
+        string destinationAddress
     );
 
     uint256 public totalShares;
@@ -110,8 +112,8 @@ contract UBTSplitter is Context, Ownable {
     function deposit(
         address token,
         uint256 tokenAmount,
-        address destinationAddress
-    ) public zeroAddress(token) zeroAddress(destinationAddress) {
+        string memory destinationAddress
+    ) public zeroAddress(token) emptyString(destinationAddress) {
         require(
             whitelistedTokens[address(token)],
             "UBTSplitter: not whitelisted"
@@ -203,11 +205,14 @@ contract UBTSplitter is Context, Ownable {
         shares[revenueAddress] = shares_;
         timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_;
+        state_lastEventNonce = state_lastEventNonce + 1;
+
         emit PayeeAdded(
             revenueAddress,
             stakingAddress,
             shares_,
             baseledgervaloper,
+            state_lastEventNonce,
             block.timestamp
         );
     }
@@ -231,11 +236,14 @@ contract UBTSplitter is Context, Ownable {
         shares[revenueAddress] = shares_;
         timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_; // add the new share of the account to total shares.
+        state_lastEventNonce = state_lastEventNonce + 1;
+
         emit PayeeUpdated(
             revenueAddress,
             stakingAddress,
             shares_,
             baseledgervaloper,
+            state_lastEventNonce,
             block.timestamp
         );
     }

@@ -99,7 +99,10 @@ contract UBTSplitter is Context, Ownable {
      */
     modifier emptyString(string memory baseledgervaloper) {
         bytes memory tempEmptyStringTest = bytes(baseledgervaloper);
-        require(tempEmptyStringTest.length != 0, "UBTSplitter: String is empty");
+        require(
+            tempEmptyStringTest.length != 0,
+            "UBTSplitter: String is empty"
+        );
         _;
     }
 
@@ -125,7 +128,13 @@ contract UBTSplitter is Context, Ownable {
         state_lastEventNonce = state_lastEventNonce + 1;
         IERC20(token).transferFrom(msg.sender, address(this), tokenAmount);
 
-        emit ERC20Deposit(msg.sender, token, tokenAmount, state_lastEventNonce, destinationAddress);
+        emit ERC20Deposit(
+            msg.sender,
+            token,
+            tokenAmount,
+            state_lastEventNonce,
+            destinationAddress
+        );
     }
 
     /**
@@ -193,7 +202,13 @@ contract UBTSplitter is Context, Ownable {
         address stakingAddress,
         uint256 shares_,
         string memory baseledgervaloper
-    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) emptyString(baseledgervaloper) {
+    )
+        public
+        onlyOwner
+        zeroAddress(revenueAddress)
+        zeroAddress(stakingAddress)
+        emptyString(baseledgervaloper)
+    {
         require(shares_ > 0, "UBTSplitter: shares are 0");
         require(
             shares[revenueAddress] == 0,
@@ -229,7 +244,13 @@ contract UBTSplitter is Context, Ownable {
         address stakingAddress,
         uint256 shares_,
         string memory baseledgervaloper
-    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) emptyString(baseledgervaloper) {
+    )
+        public
+        onlyOwner
+        zeroAddress(revenueAddress)
+        zeroAddress(stakingAddress)
+        emptyString(baseledgervaloper)
+    {
         totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
 
         validatorStakingAddress[revenueAddress] = stakingAddress;

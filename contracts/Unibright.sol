@@ -30,12 +30,14 @@ contract UBTSplitter is Context, Ownable {
         address revenueAddress,
         address stakingAddress,
         uint256 shares,
+        string baseledgervaloper,
         uint256 timestamp
     );
     event PayeeUpdated(
         address revenueAddress,
         address stakingAddress,
         uint256 shares,
+        string baseledgervaloper,
         uint256 timestamp
     );
     event WhitelistTokenUpdated(
@@ -55,10 +57,12 @@ contract UBTSplitter is Context, Ownable {
         address sender,
         address token,
         uint256 tokenAmount,
+        uint256 state_lastEventNonce,
         address destinationAddress
     );
 
     uint256 public totalShares;
+    uint256 public state_lastEventNonce;
 
     mapping(address => uint256) public shares;
     mapping(address => uint256) public timestamps;
@@ -89,6 +93,15 @@ contract UBTSplitter is Context, Ownable {
     }
 
     /**
+     * @dev Modifier for checking for empty string
+     */
+    modifier emptyString(string memory baseledgervaloper) {
+        bytes memory tempEmptyStringTest = bytes(baseledgervaloper);
+        require(tempEmptyStringTest.length != 0, "UBTSplitter: String is empty");
+        _;
+    }
+
+    /**
      * @dev Add token deposit to the contract.
      * @param token The address of the token.
      * @param tokenAmount The amount of the token.
@@ -107,9 +120,10 @@ contract UBTSplitter is Context, Ownable {
             tokenAmount > 0,
             "UBTSplitter: amount should be grater than zero"
         );
+        state_lastEventNonce = state_lastEventNonce + 1;
         IERC20(token).transferFrom(msg.sender, address(this), tokenAmount);
 
-        emit ERC20Deposit(msg.sender, token, tokenAmount, destinationAddress);
+        emit ERC20Deposit(msg.sender, token, tokenAmount, state_lastEventNonce, destinationAddress);
     }
 
     /**
@@ -170,12 +184,14 @@ contract UBTSplitter is Context, Ownable {
      * @param revenueAddress The revenue address.
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
+     * @param baseledgervaloper Identifier for the node within baseledger.
      */
     function addPayee(
         address revenueAddress,
         address stakingAddress,
-        uint256 shares_
-    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
+        uint256 shares_,
+        string memory baseledgervaloper
+    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) emptyString(baseledgervaloper) {
         require(shares_ > 0, "UBTSplitter: shares are 0");
         require(
             shares[revenueAddress] == 0,
@@ -191,6 +207,7 @@ contract UBTSplitter is Context, Ownable {
             revenueAddress,
             stakingAddress,
             shares_,
+            baseledgervaloper,
             block.timestamp
         );
     }
@@ -200,12 +217,14 @@ contract UBTSplitter is Context, Ownable {
      * @param revenueAddress The revenue address.
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
+     * @param baseledgervaloper Identifier for the node within baseledger.
      */
     function updatePayee(
         address revenueAddress,
         address stakingAddress,
-        uint256 shares_
-    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
+        uint256 shares_,
+        string memory baseledgervaloper
+    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) emptyString(baseledgervaloper) {
         totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
 
         validatorStakingAddress[revenueAddress] = stakingAddress;
@@ -216,6 +235,7 @@ contract UBTSplitter is Context, Ownable {
             revenueAddress,
             stakingAddress,
             shares_,
+            baseledgervaloper,
             block.timestamp
         );
     }

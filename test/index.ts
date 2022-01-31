@@ -28,6 +28,7 @@ describe("UBTSplitter contract tests", () => {
   let tokenSenderAddress: string;
   const baseledgervaloper = 'Testing String';
   const firstDepositNonce = 1;
+
   const destinationAddress = "0x00f10566dD219F4cFb787858B9909A468131DC0B";
 
   before(async () => {
@@ -104,14 +105,14 @@ describe("UBTSplitter contract tests", () => {
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
-    it("Should fail on transfer token with zero token destination address", async () => {
+    it("Should fail on transfer token with empty token destination address", async () => {
       await expect(
         UBTContract.connect(tokenSenderAccount).deposit(
           mockERC20Address,
           tenTokens,
-          zeroAddress
+          ''
         )
-      ).to.be.revertedWith("UBTSplitter: Address is zero address");
+      ).to.be.revertedWith("UBTSplitter: String is empty");
     });
 
     it("Should fail on transfer token which is not whitelisted into the contract", async () => {
@@ -140,6 +141,7 @@ describe("UBTSplitter contract tests", () => {
   context("For adding validators", async () => {
     it("Should add validator with share", async () => {
       const timestamp = (await getTimestamp()) + 1;
+      const depositNonce = (await UBTContract.state_lastEventNonce()).add(1);
 
       expect(
         await UBTContract.addPayee(
@@ -150,7 +152,7 @@ describe("UBTSplitter contract tests", () => {
         )
       )
         .to.emit(UBTContract, "PayeeAdded")
-        .withArgs(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper, timestamp);
+        .withArgs(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper, depositNonce, timestamp);
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.fifty);
       expect(await UBTContract.timestamps(revenue1Address)).to.equal(timestamp);
@@ -213,6 +215,7 @@ describe("UBTSplitter contract tests", () => {
     });
     it("Should update validator with share", async () => {
       const timestamp = (await getTimestamp()) + 1;
+      const depositNonce = (await UBTContract.state_lastEventNonce()).add(1);
 
       expect(
         await UBTContract.updatePayee(
@@ -223,7 +226,7 @@ describe("UBTSplitter contract tests", () => {
         )
       )
         .to.emit(UBTContract, "PayeeUpdated")
-        .withArgs(revenue1Address, stakingAddress, shares.hundred, baseledgervaloper, timestamp);
+        .withArgs(revenue1Address, stakingAddress, shares.hundred, baseledgervaloper, depositNonce, timestamp);
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
       expect(await UBTContract.payees(1)).to.equal(revenue2Address);
       expect(await UBTContract.shares(revenue1Address)).to.equal(

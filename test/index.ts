@@ -26,7 +26,7 @@ describe("UBTSplitter contract tests", () => {
   let maliciousAccount: Signer;
   let tokenSenderAccount: Signer;
   let tokenSenderAddress: string;
-  const baseledgervaloper = 'Testing String';
+  const baseledgervaloper = "Testing String";
   const firstDepositNonce = 1;
 
   const destinationAddress = "0x00f10566dD219F4cFb787858B9909A468131DC0B";
@@ -110,7 +110,7 @@ describe("UBTSplitter contract tests", () => {
         UBTContract.connect(tokenSenderAccount).deposit(
           mockERC20Address,
           tenTokens,
-          ''
+          ""
         )
       ).to.be.revertedWith("UBTSplitter: String is empty");
     });
@@ -152,7 +152,14 @@ describe("UBTSplitter contract tests", () => {
         )
       )
         .to.emit(UBTContract, "PayeeAdded")
-        .withArgs(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper, depositNonce, timestamp);
+        .withArgs(
+          revenue1Address,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper,
+          depositNonce,
+          timestamp
+        );
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.fifty);
       expect(await UBTContract.timestamps(revenue1Address)).to.equal(timestamp);
@@ -160,39 +167,74 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should update totalShares when second validator added", async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper);
-      await UBTContract.addPayee(revenue2Address, stakingAddress, shares.fifty, baseledgervaloper);
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      await UBTContract.addPayee(
+        revenue2Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
       expect(await UBTContract.totalShares()).to.equal(shares.hundred);
     });
 
     it("Should fail on add validator with zero revenue address", async () => {
       await expect(
-        UBTContract.addPayee(zeroAddress, stakingAddress, shares.fifty, baseledgervaloper)
+        UBTContract.addPayee(
+          zeroAddress,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on add validator with zero stakingAddress address", async () => {
       await expect(
-        UBTContract.addPayee(revenue1Address, zeroAddress, shares.fifty, baseledgervaloper)
+        UBTContract.addPayee(
+          revenue1Address,
+          zeroAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on add validator with zero share", async () => {
       await expect(
-        UBTContract.addPayee(revenue1Address, stakingAddress, shares.zero, baseledgervaloper)
+        UBTContract.addPayee(
+          revenue1Address,
+          stakingAddress,
+          shares.zero,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: shares are 0");
     });
 
     it("Should fail on add validator with empty baseledgervaloper string", async () => {
       await expect(
-        UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, '')
+        UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, "")
       ).to.be.revertedWith("UBTSplitter: String is empty");
     });
 
     it("Should fail on add validator with already allocated share", async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper);
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
       await expect(
-        UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper)
+        UBTContract.addPayee(
+          revenue1Address,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: revenueAddress already has shares");
     });
 
@@ -210,8 +252,18 @@ describe("UBTSplitter contract tests", () => {
 
   context("For updating validators", async () => {
     beforeEach(async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper);
-      await UBTContract.addPayee(revenue2Address, stakingAddress, shares.fifty, baseledgervaloper);
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      await UBTContract.addPayee(
+        revenue2Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
     });
     it("Should update validator with share", async () => {
       const timestamp = (await getTimestamp()) + 1;
@@ -226,7 +278,14 @@ describe("UBTSplitter contract tests", () => {
         )
       )
         .to.emit(UBTContract, "PayeeUpdated")
-        .withArgs(revenue1Address, stakingAddress, shares.hundred, baseledgervaloper, depositNonce, timestamp);
+        .withArgs(
+          revenue1Address,
+          stakingAddress,
+          shares.hundred,
+          baseledgervaloper,
+          depositNonce,
+          timestamp
+        );
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
       expect(await UBTContract.payees(1)).to.equal(revenue2Address);
       expect(await UBTContract.shares(revenue1Address)).to.equal(
@@ -264,19 +323,34 @@ describe("UBTSplitter contract tests", () => {
 
     it("Should fail on update validator with zero revenue address", async () => {
       await expect(
-        UBTContract.updatePayee(zeroAddress, stakingAddress, shares.fifty, baseledgervaloper)
+        UBTContract.updatePayee(
+          zeroAddress,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on update validator with zero staking address", async () => {
       await expect(
-        UBTContract.updatePayee(revenue1Address, zeroAddress, shares.fifty, baseledgervaloper)
+        UBTContract.updatePayee(
+          revenue1Address,
+          zeroAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on update validator with empty baseledgervaloper string", async () => {
       await expect(
-        UBTContract.updatePayee(revenue1Address, stakingAddress, shares.fifty, '')
+        UBTContract.updatePayee(
+          revenue1Address,
+          stakingAddress,
+          shares.fifty,
+          ""
+        )
       ).to.be.revertedWith("UBTSplitter: String is empty");
     });
 
@@ -294,8 +368,18 @@ describe("UBTSplitter contract tests", () => {
 
   context("For release funds for validators", async () => {
     beforeEach(async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, baseledgervaloper);
-      await UBTContract.addPayee(revenue2Address, stakingAddress, shares.fifty, baseledgervaloper);
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      await UBTContract.addPayee(
+        revenue2Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
       const tx = await mockERC20
         .connect(tokenSenderAccount)
         .approve(UBTAddress, tenTokens);

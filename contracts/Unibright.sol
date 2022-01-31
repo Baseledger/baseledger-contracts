@@ -51,14 +51,6 @@ contract UBTSplitter is Context, Ownable {
         uint256 amount
     );
 
-    event newERC20PaymentReleased(
-        IERC20 indexed token,
-        address revenueAddress,
-        address stakingAddress,
-        uint256 amount
-    );
-
-
     event ERC20Deposit(
         address sender,
         address token,
@@ -76,8 +68,6 @@ contract UBTSplitter is Context, Ownable {
     mapping(IERC20 => uint256) public erc20TotalReleased;
     mapping(IERC20 => mapping(address => uint256)) public erc20Released;
     mapping(address => bool) public whitelistedTokens;
-
-    mapping(address => uint256) newAmountForRelease;
 
     /**
      * @dev Creates an instance of `UBTSplitter` where each account in `payees` is assigned the number of shares at
@@ -97,53 +87,29 @@ contract UBTSplitter is Context, Ownable {
         require(token != address(0), "UBTSplitter: Address is zero address");
         _;
     }
-    /** 
+
+    /**
      * @dev Add token deposit to the contract.
      * @param token The address of the token.
      * @param tokenAmount The amount of the token.
      * @param destinationAddress The destination address.
      */
-    function deposit(address token, uint256 tokenAmount, address destinationAddress) public zeroAddress(token) zeroAddress(destinationAddress) {
-         require(
+    function deposit(
+        address token,
+        uint256 tokenAmount,
+        address destinationAddress
+    ) public zeroAddress(token) zeroAddress(destinationAddress) {
+        require(
             whitelistedTokens[address(token)],
             "UBTSplitter: not whitelisted"
         );
-        require(tokenAmount > 0, "UBTSplitter: amount should be grater than zero");
+        require(
+            tokenAmount > 0,
+            "UBTSplitter: amount should be grater than zero"
+        );
         IERC20(token).transferFrom(msg.sender, address(this), tokenAmount);
-        
-        for(uint i = 0; i < payees.length; i++) {
-           uint256 share = shares[payees[i]];
-           uint256 amount = (share*1e18/totalShares)*tokenAmount / 1e18;
-           newAmountForRelease[payees[i]] += amount;
-        }
 
-		emit ERC20Deposit(
-			msg.sender,
-            token,
-			tokenAmount,
-            destinationAddress
-		);
-    }
-
-    function newRelease(IERC20 token, address revenueAddress) public virtual {
-        require(
-            shares[revenueAddress] > 0,
-            "UBTSplitter: revenueAddress has no shares"
-        );
-
-        require(
-            whitelistedTokens[address(token)],
-            "UBTSplitter: not whitelisted"
-        );
-        SafeERC20.safeTransfer(token, revenueAddress, newAmountForRelease[revenueAddress]);
-        
-        emit newERC20PaymentReleased(
-            token,
-            revenueAddress,
-            validatorStakingAddress[revenueAddress],
-            newAmountForRelease[revenueAddress]
-        );
-        newAmountForRelease[revenueAddress] = 0;
+        emit ERC20Deposit(msg.sender, token, tokenAmount, destinationAddress);
     }
 
     /**

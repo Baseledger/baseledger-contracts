@@ -30,12 +30,16 @@ contract UBTSplitter is Context, Ownable {
         address revenueAddress,
         address stakingAddress,
         uint256 shares,
+        string baseledgervaloper,
+        uint256 state_lastEventNonce,
         uint256 timestamp
     );
     event PayeeUpdated(
         address revenueAddress,
         address stakingAddress,
         uint256 shares,
+        string baseledgervaloper,
+        uint256 state_lastEventNonce,
         uint256 timestamp
     );
     event WhitelistTokenUpdated(
@@ -51,7 +55,16 @@ contract UBTSplitter is Context, Ownable {
         uint256 amount
     );
 
+    event ERC20Deposit(
+        address sender,
+        address token,
+        uint256 tokenAmount,
+        uint256 state_lastEventNonce,
+        string destinationAddress
+    );
+
     uint256 public totalShares;
+    uint256 public state_lastEventNonce;
 
     mapping(address => uint256) public shares;
     mapping(address => uint256) public timestamps;
@@ -79,6 +92,49 @@ contract UBTSplitter is Context, Ownable {
     modifier zeroAddress(address token) {
         require(token != address(0), "UBTSplitter: Address is zero address");
         _;
+    }
+
+    /**
+     * @dev Modifier for checking for empty string
+     */
+    modifier emptyString(string memory baseledgervaloper) {
+        bytes memory tempEmptyStringTest = bytes(baseledgervaloper);
+        require(
+            tempEmptyStringTest.length != 0,
+            "UBTSplitter: String is empty"
+        );
+        _;
+    }
+
+    /**
+     * @dev Add token deposit to the contract.
+     * @param token The address of the token.
+     * @param tokenAmount The amount of the token.
+     * @param destinationAddress The destination address.
+     */
+    function deposit(
+        address token,
+        uint256 tokenAmount,
+        string memory destinationAddress
+    ) public zeroAddress(token) emptyString(destinationAddress) {
+        require(
+            whitelistedTokens[address(token)],
+            "UBTSplitter: not whitelisted"
+        );
+        require(
+            tokenAmount > 0,
+            "UBTSplitter: amount should be grater than zero"
+        );
+        state_lastEventNonce = state_lastEventNonce + 1;
+        IERC20(token).transferFrom(msg.sender, address(this), tokenAmount);
+
+        emit ERC20Deposit(
+            msg.sender,
+            token,
+            tokenAmount,
+            state_lastEventNonce,
+            destinationAddress
+        );
     }
 
     /**
@@ -139,12 +195,20 @@ contract UBTSplitter is Context, Ownable {
      * @param revenueAddress The revenue address.
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
+     * @param baseledgervaloper Identifier for the node within baseledger.
      */
     function addPayee(
         address revenueAddress,
         address stakingAddress,
-        uint256 shares_
-    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
+        uint256 shares_,
+        string memory baseledgervaloper
+    )
+        public
+        onlyOwner
+        zeroAddress(revenueAddress)
+        zeroAddress(stakingAddress)
+        emptyString(baseledgervaloper)
+    {
         require(shares_ > 0, "UBTSplitter: shares are 0");
         require(
             shares[revenueAddress] == 0,
@@ -156,10 +220,14 @@ contract UBTSplitter is Context, Ownable {
         shares[revenueAddress] = shares_;
         timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_;
+        state_lastEventNonce = state_lastEventNonce + 1;
+
         emit PayeeAdded(
             revenueAddress,
             stakingAddress,
             shares_,
+            baseledgervaloper,
+            state_lastEventNonce,
             block.timestamp
         );
     }
@@ -169,22 +237,34 @@ contract UBTSplitter is Context, Ownable {
      * @param revenueAddress The revenue address.
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
+     * @param baseledgervaloper Identifier for the node within baseledger.
      */
     function updatePayee(
         address revenueAddress,
         address stakingAddress,
-        uint256 shares_
-    ) public onlyOwner zeroAddress(revenueAddress) zeroAddress(stakingAddress) {
+        uint256 shares_,
+        string memory baseledgervaloper
+    )
+        public
+        onlyOwner
+        zeroAddress(revenueAddress)
+        zeroAddress(stakingAddress)
+        emptyString(baseledgervaloper)
+    {
         totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
 
         validatorStakingAddress[revenueAddress] = stakingAddress;
         shares[revenueAddress] = shares_;
         timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_; // add the new share of the account to total shares.
+        state_lastEventNonce = state_lastEventNonce + 1;
+
         emit PayeeUpdated(
             revenueAddress,
             stakingAddress,
             shares_,
+            baseledgervaloper,
+            state_lastEventNonce,
             block.timestamp
         );
     }

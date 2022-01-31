@@ -7,6 +7,7 @@ import {
   zeroAddress,
   shares,
   getTimestamp,
+  zeroToken,
   fiveTokens,
   threePointThreeInPeriodTokens,
   onePointSixInPeriodTokens,
@@ -23,13 +24,22 @@ describe("UBTSplitter contract tests", () => {
   let revenue2Address: string;
   let stakingAddress: string;
   let maliciousAccount: Signer;
+  let tokenSenderAccount: Signer;
+  let tokenSenderAddress: string;
+  const baseledgervaloper = "Testing String";
+  const firstDepositNonce = 1;
+
+  const destinationAddress = "0x00f10566dD219F4cFb787858B9909A468131DC0B";
 
   before(async () => {
     accounts = await ethers.getSigners();
     revenue1Address = await accounts[0].getAddress();
     revenue2Address = await accounts[1].getAddress();
     stakingAddress = await accounts[2].getAddress();
-    maliciousAccount = accounts[9];
+
+    tokenSenderAccount = await accounts[3];
+    tokenSenderAddress = await accounts[3].getAddress();
+    maliciousAccount = accounts[4];
   });
 
   beforeEach(async () => {
@@ -44,29 +54,112 @@ describe("UBTSplitter contract tests", () => {
     UBTContract = (await UBTFactory.deploy(mockERC20Address)) as UBTSplitter;
     await UBTContract.deployed();
     UBTAddress = UBTContract.address;
-    await mockERC20.transfer(UBTAddress, tenTokens);
+    // Transfer tokens to account which will make a deposit to the contract through deposit
+    await mockERC20.transfer(tokenSenderAddress, tenTokens);
   });
 
-  context("For transferring proper value of tokens", async () => {
-    it("Should have 10 Tokens", async () => {
+  context("For deposit function", async () => {
+    it("Should not have any tokens to the contract", async () => {
+      const contractBalance = await mockERC20.balanceOf(UBTAddress);
+      expect(contractBalance).to.equal(zeroToken);
+    });
+
+    it("Should deposit tokens through deposit function, emit deposit event and check balance of contract", async () => {
+      const accountBalance = await mockERC20.balanceOf(tokenSenderAddress);
+      expect(accountBalance).to.equal(tenTokens);
+      const tx = await mockERC20
+        .connect(tokenSenderAccount)
+        .approve(UBTAddress, tenTokens);
+      await tx.wait();
+      const allowance = await mockERC20.allowance(
+        tokenSenderAddress,
+        UBTAddress
+      );
+      expect(allowance).to.equal(tenTokens);
+      expect(
+        await UBTContract.connect(tokenSenderAccount).deposit(
+          mockERC20Address,
+          tenTokens,
+          destinationAddress
+        )
+      )
+        .to.emit(UBTContract, "ERC20Deposit")
+        .withArgs(
+          tokenSenderAddress,
+          mockERC20Address,
+          tenTokens,
+          firstDepositNonce,
+          destinationAddress
+        );
       const contractBalance = await mockERC20.balanceOf(UBTAddress);
       expect(contractBalance).to.equal(tenTokens);
+    });
+
+    it("Should fail on transfer token with zero token address", async () => {
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          zeroAddress,
+          tenTokens,
+          destinationAddress
+        )
+      ).to.be.revertedWith("UBTSplitter: Address is zero address");
+    });
+
+    it("Should fail on transfer token with empty token destination address", async () => {
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          mockERC20Address,
+          tenTokens,
+          ""
+        )
+      ).to.be.revertedWith("UBTSplitter: String is empty");
+    });
+
+    it("Should fail on transfer token which is not whitelisted into the contract", async () => {
+      await UBTContract.setWhitelistedToken(mockERC20Address, false);
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          mockERC20Address,
+          tenTokens,
+          destinationAddress
+        )
+      ).to.be.revertedWith("UBTSplitter: not whitelisted");
+      await UBTContract.setWhitelistedToken(mockERC20Address, true);
+    });
+
+    it("Should fail on transfer zero token amount", async () => {
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          mockERC20Address,
+          zeroToken,
+          destinationAddress
+        )
+      ).to.be.revertedWith("UBTSplitter: amount should be grater than zero");
     });
   });
 
   context("For adding validators", async () => {
     it("Should add validator with share", async () => {
       const timestamp = (await getTimestamp()) + 1;
+      const depositNonce = (await UBTContract.state_lastEventNonce()).add(1);
 
       expect(
         await UBTContract.addPayee(
           revenue1Address,
           stakingAddress,
-          shares.fifty
+          shares.fifty,
+          baseledgervaloper
         )
       )
         .to.emit(UBTContract, "PayeeAdded")
-        .withArgs(revenue1Address, stakingAddress, shares.fifty, timestamp);
+        .withArgs(
+          revenue1Address,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper,
+          depositNonce,
+          timestamp
+        );
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.fifty);
       expect(await UBTContract.timestamps(revenue1Address)).to.equal(timestamp);
@@ -74,33 +167,74 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should update totalShares when second validator added", async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty);
-      await UBTContract.addPayee(revenue2Address, stakingAddress, shares.fifty);
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      await UBTContract.addPayee(
+        revenue2Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
       expect(await UBTContract.totalShares()).to.equal(shares.hundred);
     });
 
     it("Should fail on add validator with zero revenue address", async () => {
       await expect(
-        UBTContract.addPayee(zeroAddress, stakingAddress, shares.fifty)
+        UBTContract.addPayee(
+          zeroAddress,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on add validator with zero stakingAddress address", async () => {
       await expect(
-        UBTContract.addPayee(revenue1Address, zeroAddress, shares.fifty)
+        UBTContract.addPayee(
+          revenue1Address,
+          zeroAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on add validator with zero share", async () => {
       await expect(
-        UBTContract.addPayee(revenue1Address, stakingAddress, shares.zero)
+        UBTContract.addPayee(
+          revenue1Address,
+          stakingAddress,
+          shares.zero,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: shares are 0");
     });
 
-    it("Should fail on add validator with already allocated share", async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty);
+    it("Should fail on add validator with empty baseledgervaloper string", async () => {
       await expect(
-        UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty)
+        UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, "")
+      ).to.be.revertedWith("UBTSplitter: String is empty");
+    });
+
+    it("Should fail on add validator with already allocated share", async () => {
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      await expect(
+        UBTContract.addPayee(
+          revenue1Address,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: revenueAddress already has shares");
     });
 
@@ -109,7 +243,8 @@ describe("UBTSplitter contract tests", () => {
         UBTContract.connect(maliciousAccount).addPayee(
           revenue1Address,
           stakingAddress,
-          shares.fifty
+          shares.fifty,
+          baseledgervaloper
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
@@ -117,21 +252,40 @@ describe("UBTSplitter contract tests", () => {
 
   context("For updating validators", async () => {
     beforeEach(async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty);
-      await UBTContract.addPayee(revenue2Address, stakingAddress, shares.fifty);
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      await UBTContract.addPayee(
+        revenue2Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
     });
     it("Should update validator with share", async () => {
       const timestamp = (await getTimestamp()) + 1;
+      const depositNonce = (await UBTContract.state_lastEventNonce()).add(1);
 
       expect(
         await UBTContract.updatePayee(
           revenue1Address,
           stakingAddress,
-          shares.hundred
+          shares.hundred,
+          baseledgervaloper
         )
       )
         .to.emit(UBTContract, "PayeeUpdated")
-        .withArgs(revenue1Address, stakingAddress, shares.hundred, timestamp);
+        .withArgs(
+          revenue1Address,
+          stakingAddress,
+          shares.hundred,
+          baseledgervaloper,
+          depositNonce,
+          timestamp
+        );
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
       expect(await UBTContract.payees(1)).to.equal(revenue2Address);
       expect(await UBTContract.shares(revenue1Address)).to.equal(
@@ -145,12 +299,14 @@ describe("UBTSplitter contract tests", () => {
       await UBTContract.updatePayee(
         revenue1Address,
         stakingAddress,
-        shares.hundred
+        shares.hundred,
+        baseledgervaloper
       );
       await UBTContract.updatePayee(
         revenue2Address,
         stakingAddress,
-        shares.hundred
+        shares.hundred,
+        baseledgervaloper
       );
       expect(await UBTContract.totalShares()).to.equal(shares.twoHundred);
     });
@@ -159,21 +315,43 @@ describe("UBTSplitter contract tests", () => {
       await UBTContract.updatePayee(
         revenue1Address,
         stakingAddress,
-        shares.zero
+        shares.zero,
+        baseledgervaloper
       );
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.zero);
     });
 
     it("Should fail on update validator with zero revenue address", async () => {
       await expect(
-        UBTContract.updatePayee(zeroAddress, stakingAddress, shares.fifty)
+        UBTContract.updatePayee(
+          zeroAddress,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
     });
 
     it("Should fail on update validator with zero staking address", async () => {
       await expect(
-        UBTContract.updatePayee(revenue1Address, zeroAddress, shares.fifty)
+        UBTContract.updatePayee(
+          revenue1Address,
+          zeroAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
       ).to.be.revertedWith("UBTSplitter: Address is zero address");
+    });
+
+    it("Should fail on update validator with empty baseledgervaloper string", async () => {
+      await expect(
+        UBTContract.updatePayee(
+          revenue1Address,
+          stakingAddress,
+          shares.fifty,
+          ""
+        )
+      ).to.be.revertedWith("UBTSplitter: String is empty");
     });
 
     it("Should fail if malicious account tries to update validator ", async () => {
@@ -181,7 +359,8 @@ describe("UBTSplitter contract tests", () => {
         UBTContract.connect(maliciousAccount).updatePayee(
           revenue1Address,
           stakingAddress,
-          shares.fifty
+          shares.fifty,
+          baseledgervaloper
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
@@ -189,8 +368,27 @@ describe("UBTSplitter contract tests", () => {
 
   context("For release funds for validators", async () => {
     beforeEach(async () => {
-      await UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty);
-      await UBTContract.addPayee(revenue2Address, stakingAddress, shares.fifty);
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      await UBTContract.addPayee(
+        revenue2Address,
+        stakingAddress,
+        shares.fifty,
+        baseledgervaloper
+      );
+      const tx = await mockERC20
+        .connect(tokenSenderAccount)
+        .approve(UBTAddress, tenTokens);
+      await tx.wait();
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        mockERC20Address,
+        tenTokens,
+        destinationAddress
+      );
     });
 
     it("Should release amount of tokens based on share with equal shares", async () => {
@@ -208,7 +406,8 @@ describe("UBTSplitter contract tests", () => {
       await UBTContract.updatePayee(
         revenue1Address,
         stakingAddress,
-        shares.twentyFive
+        shares.twentyFive,
+        baseledgervaloper
       );
       await UBTContract.release(mockERC20Address, revenue1Address);
       expect(
@@ -222,7 +421,8 @@ describe("UBTSplitter contract tests", () => {
       await UBTContract.updatePayee(
         revenue1Address,
         stakingAddress,
-        shares.twentyFive
+        shares.twentyFive,
+        baseledgervaloper
       );
       await UBTContract.release(mockERC20Address, revenue1Address);
       expect(
@@ -248,7 +448,8 @@ describe("UBTSplitter contract tests", () => {
       await UBTContract.updatePayee(
         revenue1Address,
         stakingAddress,
-        shares.zero
+        shares.zero,
+        baseledgervaloper
       );
       await expect(
         UBTContract.release(mockERC20Address, revenue1Address)

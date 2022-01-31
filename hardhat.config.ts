@@ -12,14 +12,19 @@ const lazyImport = async (module: any) => {
   return await import(module);
 };
 
-task("deploy-contracts", "Deploys contracts").setAction(async () => {
+task("deploy-contracts", "Deploys contracts")
+.addParam("token", "The token's address")
+.setAction(async (taskArgs) => {
   const { deployContracts } = await lazyImport("./scripts/deploy");
-  await deployContracts();
+  await deployContracts(taskArgs.token);
 });
 
-task("verify-contracts", "Verifies contracts").setAction(async () => {
+task("verify-contracts", "Verifies contracts")
+.addParam("contract", "The contract's address")
+.addParam("token", "The token's address")
+.setAction(async (taskArgs) => {
   const { verifyContracts } = await lazyImport("./scripts/verify");
-  await verifyContracts();
+  await verifyContracts(taskArgs.contract, taskArgs.token);
 });
 
 const config: HardhatUserConfig = {

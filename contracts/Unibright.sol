@@ -67,13 +67,20 @@ contract UBTSplitter is Context, Ownable {
     uint256 public state_lastEventNonce;
 
     mapping(address => uint256) public shares;
-    mapping(address => uint256) public timestamps;
     mapping(address => address) public validatorStakingAddress; // revenueAddress => validatorStakingAddress
     address[] public payees;
 
     mapping(IERC20 => uint256) public erc20TotalReleased;
     mapping(IERC20 => mapping(address => uint256)) public erc20Released;
-    mapping(address => bool) public whitelistedTokens;
+    
+    address public theWhitelistedToken;
+
+    uint256 public theErc20ToBeReleasedInPeriod;
+    uint256 public theErc20NotReleasedInLastPeriod;
+    uint256 public theErc20CurrentPeriod;
+
+    mapping(uint256 => mapping (address => uint256)) theErc20ReleasedPerRecipientInPeriods;
+
 
     /**
      * @dev Creates an instance of `UBTSplitter` where each account in `payees` is assigned the number of shares at
@@ -83,7 +90,7 @@ contract UBTSplitter is Context, Ownable {
      * duplicates in `payees`.
      */
     constructor(address token) {
-        whitelistedTokens[token] = true;
+        theWhitelistedToken = token;
     }
 
     /**
@@ -118,7 +125,7 @@ contract UBTSplitter is Context, Ownable {
         string memory destinationAddress
     ) public zeroAddress(token) emptyString(destinationAddress) {
         require(
-            whitelistedTokens[address(token)],
+            theWhitelistedToken == address(token),
             "UBTSplitter: not whitelisted"
         );
         require(
@@ -126,6 +133,9 @@ contract UBTSplitter is Context, Ownable {
             "UBTSplitter: amount should be grater than zero"
         );
         state_lastEventNonce = state_lastEventNonce + 1;
+
+        theErc20ToBeReleasedInPeriod += tokenAmount;
+
         IERC20(token).transferFrom(msg.sender, address(this), tokenAmount);
 
         emit ERC20Deposit(
@@ -149,22 +159,24 @@ contract UBTSplitter is Context, Ownable {
         );
 
         require(
-            whitelistedTokens[address(token)],
+            theWhitelistedToken == address(token),
             "UBTSplitter: not whitelisted"
         );
 
-        uint256 totalReceived = token.balanceOf(address(this)) +
-            erc20TotalReleased[token];
-        uint256 payment = _pendingPayment(
-            revenueAddress,
-            totalReceived,
-            erc20Released[token][revenueAddress]
-        );
+        if (!(theErc20ReleasedPerRecipientInPeriods[theErc20CurrentPeriod][revenueAddress] > 0))
+                theErc20ReleasedPerRecipientInPeriods[theErc20CurrentPeriod][revenueAddress] = 0;
+       
+        uint256 alreadyReceivedSinceLastPayeeUpdate = theErc20ReleasedPerRecipientInPeriods[theErc20CurrentPeriod][revenueAddress];
+        uint256 toBeReleased = theErc20ToBeReleasedInPeriod;        
+        toBeReleased += theErc20NotReleasedInLastPeriod;
+        uint256 payment = (shares[revenueAddress] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
         require(payment != 0, "UBTSplitter: revenueAddress is not due payment");
 
         erc20Released[token][revenueAddress] += payment;
         erc20TotalReleased[token] += payment;
+        
+        theErc20ReleasedPerRecipientInPeriods[theErc20CurrentPeriod][revenueAddress] += payment;
 
         SafeERC20.safeTransfer(token, revenueAddress, payment);
         emit ERC20PaymentReleased(
@@ -218,9 +230,13 @@ contract UBTSplitter is Context, Ownable {
         payees.push(revenueAddress);
         validatorStakingAddress[revenueAddress] = stakingAddress;
         shares[revenueAddress] = shares_;
-        timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_;
         state_lastEventNonce = state_lastEventNonce + 1;
+
+        theErc20ToBeReleasedInPeriod = 0;
+        theErc20CurrentPeriod += 1;
+        theErc20NotReleasedInLastPeriod = IERC20(theWhitelistedToken).balanceOf(address(this));
+        
 
         emit PayeeAdded(
             revenueAddress,
@@ -255,9 +271,12 @@ contract UBTSplitter is Context, Ownable {
 
         validatorStakingAddress[revenueAddress] = stakingAddress;
         shares[revenueAddress] = shares_;
-        timestamps[revenueAddress] = block.timestamp;
         totalShares = totalShares + shares_; // add the new share of the account to total shares.
         state_lastEventNonce = state_lastEventNonce + 1;
+
+        theErc20ToBeReleasedInPeriod = 0;
+        theErc20CurrentPeriod += 1;
+        theErc20NotReleasedInLastPeriod = IERC20(theWhitelistedToken).balanceOf(address(this));
 
         emit PayeeUpdated(
             revenueAddress,
@@ -269,13 +288,5 @@ contract UBTSplitter is Context, Ownable {
         );
     }
 
-    function setWhitelistedToken(address token, bool isWhitelisted)
-        public
-        onlyOwner
-        zeroAddress(token)
-    {
-        require(token.isContract(), "UBTSplitter: not contract address");
-        whitelistedTokens[token] = isWhitelisted;
-        emit WhitelistTokenUpdated(msg.sender, token, isWhitelisted);
-    }
+    
 }

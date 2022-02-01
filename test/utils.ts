@@ -30,3 +30,7 @@ export const getTimestamp = async () => {
   const block = await ethers.provider.getBlock(blockNumber);
   return block.timestamp;
 };
+
+export const formatTokens = (amount: string) => {
+  return ethers.utils.parseEther(amount);
+};

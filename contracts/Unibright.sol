@@ -162,10 +162,7 @@ contract UBTSplitter is Context, Ownable {
             theWhitelistedToken == address(token),
             "UBTSplitter: not whitelisted"
         );
-
-        if (!(theErc20ReleasedPerRecipientInPeriods[theErc20CurrentPeriod][revenueAddress] > 0))
-                theErc20ReleasedPerRecipientInPeriods[theErc20CurrentPeriod][revenueAddress] = 0;
-       
+   
         uint256 alreadyReceivedSinceLastPayeeUpdate = theErc20ReleasedPerRecipientInPeriods[theErc20CurrentPeriod][revenueAddress];
         uint256 toBeReleased = theErc20ToBeReleasedInPeriod;        
         toBeReleased += theErc20NotReleasedInLastPeriod;

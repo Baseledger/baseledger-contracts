@@ -10,6 +10,7 @@ import {
   zeroToken,
   fiveTokens,
   threePointThreeInPeriodTokens,
+  formatTokens,
 } from "./utils";
 import { Signer } from "ethers";
 
@@ -581,6 +582,213 @@ describe("UBTSplitter contract tests", () => {
     //     UBTContract.release(mockERC20Address, revenue1Address)
     //   ).to.be.revertedWith("UBTSplitter: not whitelisted");
     // });
+  });
+
+  context("For release funds for validators with no equal shares", async () => {
+    beforeEach(async () => {
+      // set up 60/40 shares
+      await UBTContract.addPayee(
+        revenue1Address,
+        stakingAddress,
+        shares.twenty * 3,
+        baseledgervaloper
+      );
+      await UBTContract.addPayee(
+        revenue2Address,
+        stakingAddress,
+        shares.twenty * 2,
+        baseledgervaloper
+      );
+      // start with 50 ubt deposited from account with 100 ubt
+      await mockERC20.transfer(tokenSenderAddress, formatTokens("100"));
+      const tx = await mockERC20
+        .connect(tokenSenderAccount)
+        .approve(UBTAddress, formatTokens("100"));
+      await tx.wait();
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        mockERC20Address,
+        formatTokens("50"),
+        destinationAddress
+      );
+    });
+
+    it("Should release amount of tokens based on not equal shares", async () => {
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("30"));
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("20"));
+    });
+
+    it("Should release amount of tokens based on share with equal shares after 3rd payee is added", async () => {
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+
+      accounts = await ethers.getSigners();
+      const revenue3Address = await accounts[3].getAddress();
+
+      // 3rd payee added
+      await UBTContract.addPayee(
+        revenue3Address,
+        stakingAddress,
+        shares.twenty,
+        "baseledgervaloper123"
+      );
+
+      // deposit 20 more ubt
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        mockERC20Address,
+        formatTokens("20"),
+        destinationAddress
+      );
+
+      // all 3 release again
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+      await UBTContract.release(mockERC20Address, revenue3Address);
+
+      // first got 30 in first release, 10 in second (60 * 20 / 120)
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("40"));
+
+      // second got 20 in first release, 6.6666... in second (40 * 20 / 120)
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("26.666666666666666666"));
+
+      // third got only 3.333... in second release (20 * 20 / 120)
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue3Address)
+      ).to.equal(threePointThreeInPeriodTokens);
+    });
+
+    it("Should update share and release the right amount of tokens after 2 deposits", async () => {
+      // set shares to 60/20, 50 ubt deposited
+      await UBTContract.updatePayee(
+        revenue2Address,
+        stakingAddress,
+        shares.twenty,
+        baseledgervaloper
+      );
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("37.5"));
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("12.5"));
+
+      // deposit 20 more ubt and release again to make sure those 20 are correctly split as well
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        mockERC20Address,
+        formatTokens("20"),
+        destinationAddress
+      );
+
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("52.5"));
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("17.5"));
+    });
+
+    it("Should release token, update share, send new token amount and then release right amount of tokens", async () => {
+      // only first one release and then update happens before 2nd one releases, 50 deposited
+      await UBTContract.release(mockERC20Address, revenue1Address);
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("30"));
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("0"));
+
+      await UBTContract.updatePayee(
+        revenue2Address,
+        stakingAddress,
+        shares.twentyFive,
+        baseledgervaloper
+      );
+
+      // deposit 20 more ubt and release again
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        mockERC20Address,
+        formatTokens("20"),
+        destinationAddress
+      );
+
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+
+      // because only first released before update, 20 unreleased ubts remained,
+      // so now 40 ubts are splitted with 60/25 shares
+
+      // 30 + 60 * 40 / 85
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("58.235294117647058823"));
+
+      // 0 + 25 * 40 / 85
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("11.764705882352941176"));
+    });
+
+    it("Should BOTH release token, update share, send new token amount and then BOTH release right amount of tokens", async () => {
+      // both releases, 50 deposited, 60/40 shares
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("30"));
+
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("20"));
+
+      await UBTContract.updatePayee(
+        revenue2Address,
+        stakingAddress,
+        shares.twentyFive,
+        baseledgervaloper
+      );
+
+      // deposit 20 more ubt and release again
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        mockERC20Address,
+        formatTokens("20"),
+        destinationAddress
+      );
+
+      await UBTContract.release(mockERC20Address, revenue1Address);
+      await UBTContract.release(mockERC20Address, revenue2Address);
+
+      // both released, now only 20 deposited are split according to new shares 60/25
+
+      // 30 + 60 * 20 / 85
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+      ).to.equal(formatTokens("44.117647058823529411"));
+
+      // 20 + 25 * 20 / 85
+      expect(
+        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+      ).to.equal(formatTokens("25.882352941176470588"));
+    });
   });
 
   // context("For set whitelisted tokens", async () => {

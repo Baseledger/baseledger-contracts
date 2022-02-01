@@ -115,17 +115,17 @@ describe("UBTSplitter contract tests", () => {
       ).to.be.revertedWith("UBTSplitter: String is empty");
     });
 
-    it("Should fail on transfer token which is not whitelisted into the contract", async () => {
-      await UBTContract.setWhitelistedToken(mockERC20Address, false);
-      await expect(
-        UBTContract.connect(tokenSenderAccount).deposit(
-          mockERC20Address,
-          tenTokens,
-          destinationAddress
-        )
-      ).to.be.revertedWith("UBTSplitter: not whitelisted");
-      await UBTContract.setWhitelistedToken(mockERC20Address, true);
-    });
+    // it("Should fail on transfer token which is not whitelisted into the contract", async () => {
+    //   await UBTContract.setWhitelistedToken(mockERC20Address, false);
+    //   await expect(
+    //     UBTContract.connect(tokenSenderAccount).deposit(
+    //       mockERC20Address,
+    //       tenTokens,
+    //       destinationAddress
+    //     )
+    //   ).to.be.revertedWith("UBTSplitter: not whitelisted");
+    //   await UBTContract.setWhitelistedToken(mockERC20Address, true);
+    // });
 
     it("Should fail on transfer zero token amount", async () => {
       await expect(
@@ -162,7 +162,6 @@ describe("UBTSplitter contract tests", () => {
         );
       expect(await UBTContract.payees(0)).to.equal(revenue1Address);
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.fifty);
-      expect(await UBTContract.timestamps(revenue1Address)).to.equal(timestamp);
       expect(await UBTContract.totalShares()).to.equal(shares.fifty);
     });
 
@@ -291,7 +290,6 @@ describe("UBTSplitter contract tests", () => {
       expect(await UBTContract.shares(revenue1Address)).to.equal(
         shares.hundred
       );
-      expect(await UBTContract.timestamps(revenue1Address)).to.equal(timestamp);
       expect(await UBTContract.totalShares()).to.equal(shares.hundredFifty);
     });
 
@@ -391,16 +389,60 @@ describe("UBTSplitter contract tests", () => {
       );
     });
 
+    // it("Should release amount of tokens based on share with equal shares", async () => {
+    //   await UBTContract.release(mockERC20Address, revenue1Address);
+    //   await UBTContract.release(mockERC20Address, revenue2Address);
+    //   expect(
+    //     await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+    //   ).to.equal(fiveTokens);
+    //   expect(
+    //     await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+    //   ).to.equal(fiveTokens);
+    // });
+
     it("Should release amount of tokens based on share with equal shares", async () => {
-      await UBTContract.release(mockERC20Address, revenue1Address);
-      await UBTContract.release(mockERC20Address, revenue2Address);
-      expect(
-        await UBTContract.erc20Released(mockERC20Address, revenue1Address)
-      ).to.equal(fiveTokens);
-      expect(
-        await UBTContract.erc20Released(mockERC20Address, revenue2Address)
-      ).to.equal(fiveTokens);
-    });
+      // 2 payees and 10 ubt deposited
+            await UBTContract.release(mockERC20Address, revenue1Address);
+            await UBTContract.release(mockERC20Address, revenue2Address);
+      // after release they each have 5 ubt
+            expect(
+              await UBTContract.erc20Released(mockERC20Address, revenue1Address)
+            ).to.equal(fiveTokens);
+            expect(
+              await UBTContract.erc20Released(mockERC20Address, revenue2Address)
+            ).to.equal(fiveTokens);
+      
+      // 10 more ubt deposited 
+            await mockERC20.transfer(UBTAddress, tenTokens);
+            accounts = await ethers.getSigners();
+            const revenue3Address = await accounts[3].getAddress();
+      
+      // 3rd payee added
+            await UBTContract.addPayee(revenue3Address, stakingAddress, shares.fifty, "baseledgervaloper123");
+      
+      // all 3 release again
+            await UBTContract.release(mockERC20Address, revenue1Address);
+            await UBTContract.release(mockERC20Address, revenue2Address);
+            await UBTContract.release(mockERC20Address, revenue3Address);
+      
+      // check total released for all 3
+            const f = await UBTContract.erc20Released(
+              mockERC20Address,
+              revenue1Address
+            );
+            const s = await UBTContract.erc20Released(
+              mockERC20Address,
+              revenue2Address
+            );
+            const t = await UBTContract.erc20Released(
+              mockERC20Address,
+              revenue3Address
+            );
+            console.log("first one ", f);
+            console.log("second one ", s);
+            console.log("third one ", t);
+          });
+
 
     it("Should update share and release the right amount of tokens", async () => {
       await UBTContract.updatePayee(
@@ -463,50 +505,50 @@ describe("UBTSplitter contract tests", () => {
       ).to.be.revertedWith("UBTSplitter: revenueAddress is not due payment");
     });
 
-    it("Should fail on try to release on validator without which is not whitelisted", async () => {
-      await UBTContract.setWhitelistedToken(mockERC20Address, false);
-      await expect(
-        UBTContract.release(mockERC20Address, revenue1Address)
-      ).to.be.revertedWith("UBTSplitter: not whitelisted");
-    });
+    // it("Should fail on try to release on validator without which is not whitelisted", async () => {
+    //   await UBTContract.setWhitelistedToken(mockERC20Address, false);
+    //   await expect(
+    //     UBTContract.release(mockERC20Address, revenue1Address)
+    //   ).to.be.revertedWith("UBTSplitter: not whitelisted");
+    // });
   });
 
-  context("For set whitelisted tokens", async () => {
-    it("Should set token address into the whitelist with different statuses", async () => {
-      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
-        true
-      );
-      await UBTContract.setWhitelistedToken(mockERC20Address, false);
-      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
-        false
-      );
-      expect(await UBTContract.setWhitelistedToken(mockERC20Address, true))
-        .to.emit(UBTContract, "WhitelistTokenUpdated")
-        .withArgs(revenue1Address, mockERC20Address, true);
-      expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
-        true
-      );
-    });
+  // context("For set whitelisted tokens", async () => {
+  //   it("Should set token address into the whitelist with different statuses", async () => {
+  //     expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
+  //       true
+  //     );
+  //     await UBTContract.setWhitelistedToken(mockERC20Address, false);
+  //     expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
+  //       false
+  //     );
+  //     expect(await UBTContract.setWhitelistedToken(mockERC20Address, true))
+  //       .to.emit(UBTContract, "WhitelistTokenUpdated")
+  //       .withArgs(revenue1Address, mockERC20Address, true);
+  //     expect(await UBTContract.whitelistedTokens(mockERC20Address)).to.equal(
+  //       true
+  //     );
+  //   });
 
-    it("Should fail on try to set zero address", async () => {
-      await expect(
-        UBTContract.setWhitelistedToken(zeroAddress, true)
-      ).to.be.revertedWith("UBTSplitter: Address is zero address");
-    });
+  //   it("Should fail on try to set zero address", async () => {
+  //     await expect(
+  //       UBTContract.setWhitelistedToken(zeroAddress, true)
+  //     ).to.be.revertedWith("UBTSplitter: Address is zero address");
+  //   });
 
-    it("Should fail on try to set address which is not contract", async () => {
-      await expect(
-        UBTContract.setWhitelistedToken(revenue1Address, true)
-      ).to.be.revertedWith("UBTSplitter: not contract address");
-    });
+  //   it("Should fail on try to set address which is not contract", async () => {
+  //     await expect(
+  //       UBTContract.setWhitelistedToken(revenue1Address, true)
+  //     ).to.be.revertedWith("UBTSplitter: not contract address");
+  //   });
 
-    it("Should fail if malicious account tries to set address to whitelist ", async () => {
-      await expect(
-        UBTContract.connect(maliciousAccount).setWhitelistedToken(
-          mockERC20Address,
-          true
-        )
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-    });
-  });
+  //   it("Should fail if malicious account tries to set address to whitelist ", async () => {
+  //     await expect(
+  //       UBTContract.connect(maliciousAccount).setWhitelistedToken(
+  //         mockERC20Address,
+  //         true
+  //       )
+  //     ).to.be.revertedWith("Ownable: caller is not the owner");
+  //   });
+  // });
 });

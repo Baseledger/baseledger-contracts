@@ -67,8 +67,8 @@ contract UBTSplitter is Context, Ownable {
     mapping(address => address) public validatorStakingAddress; // revenueAddress => validatorStakingAddress
     address[] public payees;
 
-    mapping(IERC20 => uint256) public ubtTotalReleased;
-    mapping(IERC20 => mapping(address => uint256)) public ubtReleased;
+    uint256 public ubtTotalReleased;
+    mapping(address => uint256) public ubtReleased;
     
     uint256 public ubtToBeReleasedInPeriod;
     uint256 public ubtNotReleasedInLastPeriod;
@@ -111,35 +111,29 @@ contract UBTSplitter is Context, Ownable {
 
     /**
      * @dev Add token deposit to the contract.
-     * @param token The address of the token.
-     * @param tokenAmount The amount of the token.
-     * @param destinationAddress The destination address.
+     * @param amount The amount of the token.
+     * @param baseledgerDestinationAddress The destination address.
      */
     function deposit(
-        address token,
-        uint256 tokenAmount,
-        string memory destinationAddress
-    ) public zeroAddress(token) emptyString(destinationAddress) {
+        uint256 amount,
+        string memory baseledgerDestinationAddress
+    ) public emptyString(baseledgerDestinationAddress) {
         require(
-            whitelistedToken == address(token),
-            "UBTSplitter: not whitelisted"
-        );
-        require(
-            tokenAmount > 0,
+            amount > 0,
             "UBTSplitter: amount should be grater than zero"
         );
         lastEventNonce = lastEventNonce + 1;
 
-        ubtToBeReleasedInPeriod += tokenAmount;
+        ubtToBeReleasedInPeriod += amount;
 
-        IERC20(token).transferFrom(msg.sender, address(this), tokenAmount);
+        IERC20(whitelistedToken).transferFrom(msg.sender, address(this), amount);
 
         emit UbtDeposited(
             msg.sender,
-            token,
-            tokenAmount,
+            whitelistedToken,
+            amount,
             lastEventNonce,
-            destinationAddress
+            baseledgerDestinationAddress
         );
     }
 
@@ -148,15 +142,10 @@ contract UBTSplitter is Context, Ownable {
      * percentage of the total shares and their previous withdrawals. `token` must be the address of an IERC20
      * contract.
      */
-    function release(IERC20 token, address revenueAddress) public virtual {
+    function release(address revenueAddress) public virtual {
         require(
             shares[revenueAddress] > 0,
             "UBTSplitter: revenueAddress has no shares"
-        );
-
-        require(
-            whitelistedToken == address(token),
-            "UBTSplitter: not whitelisted"
         );
    
         uint256 alreadyReceivedSinceLastPayeeUpdate = ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][revenueAddress];
@@ -166,33 +155,18 @@ contract UBTSplitter is Context, Ownable {
 
         require(payment != 0, "UBTSplitter: revenueAddress is not due payment");
 
-        ubtReleased[token][revenueAddress] += payment;
-        ubtTotalReleased[token] += payment;
+        ubtReleased[revenueAddress] += payment;
+        ubtTotalReleased += payment;
         
         ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][revenueAddress] += payment;
 
-        SafeERC20.safeTransfer(token, revenueAddress, payment);
+        SafeERC20.safeTransfer(IERC20(whitelistedToken), revenueAddress, payment);
         emit UbtPaymentReleased(
-            token,
+            IERC20(whitelistedToken),
             revenueAddress,
             validatorStakingAddress[revenueAddress],
             payment
         );
-    }
-
-    /**
-     * @dev internal logic for computing the pending payment of an `account` given the token historical balances and
-     * already released amounts.
-     */
-    function _pendingPayment(
-        address account,
-        uint256 totalReceived,
-        uint256 alreadyReleased
-    ) private view returns (uint256) {
-        uint256 formula = (totalReceived * shares[account]) /
-            totalShares -
-            alreadyReleased;
-        return formula;
     }
 
     /**
@@ -280,6 +254,4 @@ contract UBTSplitter is Context, Ownable {
             block.timestamp
         );
     }
-
-    
 }

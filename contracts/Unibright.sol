@@ -93,7 +93,7 @@ contract UBTSplitter is Context, Ownable {
      * @dev Modifier for checking for zero address
      */
     modifier zeroAddress(address token) {
-        require(token != address(0), "UBTSplitter: Address is zero address");
+        require(token != address(0), "address is zero address");
         _;
     }
 
@@ -104,7 +104,7 @@ contract UBTSplitter is Context, Ownable {
         bytes memory tempEmptyStringTest = bytes(baseledgervaloper);
         require(
             tempEmptyStringTest.length != 0,
-            "UBTSplitter: String is empty"
+            "string is empty"
         );
         _;
     }
@@ -120,7 +120,7 @@ contract UBTSplitter is Context, Ownable {
     ) public emptyString(baseledgerDestinationAddress) {
         require(
             amount > 0,
-            "UBTSplitter: amount should be grater than zero"
+            "amount should be grater than zero"
         );
         lastEventNonce = lastEventNonce + 1;
 
@@ -145,7 +145,7 @@ contract UBTSplitter is Context, Ownable {
     function release(address revenueAddress) public virtual {
         require(
             shares[revenueAddress] > 0,
-            "UBTSplitter: revenueAddress has no shares"
+            "revenueAddress has no shares"
         );
    
         uint256 alreadyReceivedSinceLastPayeeUpdate = ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][revenueAddress];
@@ -153,7 +153,7 @@ contract UBTSplitter is Context, Ownable {
         toBeReleased += ubtNotReleasedInLastPeriod;
         uint256 payment = (shares[revenueAddress] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
-        require(payment != 0, "UBTSplitter: revenueAddress is not due payment");
+        require(payment != 0, "revenueAddress is not due payment");
 
         ubtReleased[revenueAddress] += payment;
         ubtTotalReleased += payment;
@@ -188,10 +188,10 @@ contract UBTSplitter is Context, Ownable {
         zeroAddress(stakingAddress)
         emptyString(baseledgervaloper)
     {
-        require(shares_ > 0, "UBTSplitter: shares are 0");
+        require(shares_ > 0, "shares are 0");
         require(
             shares[revenueAddress] == 0,
-            "UBTSplitter: revenueAddress already has shares"
+            "revenueAddress already has shares"
         );
 
         payees.push(revenueAddress);

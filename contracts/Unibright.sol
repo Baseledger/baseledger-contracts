@@ -187,11 +187,11 @@ contract UBTSplitter is Context, Ownable {
         zeroAddress(stakingAddress)
         emptyString(baseledgervaloper)
     {
-        require(shares_ > 0, "shares are 0");
         require(
-            shares[revenueAddress] == 0,
-            "revenueAddress already has shares"
+            payees[revenueAddress] == false,
+            "payee already exists"
         );
+        require(shares_ > 0, "shares are 0");
 
         payees[revenueAddress] = true;
         validatorStakingAddress[revenueAddress] = stakingAddress;

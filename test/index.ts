@@ -206,7 +206,7 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty,
           baseledgervaloper
         )
-      ).to.be.revertedWith("revenueAddress already has shares");
+      ).to.be.revertedWith("payee already exists");
     });
 
     it("Should fail if malicious account tries to add validator ", async () => {

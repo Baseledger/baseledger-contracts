@@ -9,24 +9,21 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title UBTSplitter
- * @dev This contract allows to split Ether payments among a group of accounts. The sender does not need to be aware
- * that the Ether will be split in this way, since it is handled transparently by the contract.
+ * @dev This contract allows to split UBT payments among a group of accounts. The sender does not need to be aware
+ * that the UBT will be split in this way, since it is handled transparently by the contract.
+ * Contract is based on PaymentSplitter, but difference is that in PaymentSplitter payees are added only once in constructor,
+ * but here can be added and update later. Because of this, contract needs to track release amount since the last payee update.
+ * Offchain solution should take care of notifying payees to pull their funds before payees are added or updated. 
  *
  * The split can be in equal parts or in any other arbitrary proportion. The way this is specified is by assigning each
- * account to a number of shares. Of all the Ether that this contract receives, each account will then be able to claim
+ * account to a number of shares. Of all the UBT that this contract receives, each account will then be able to claim
  * an amount proportional to the percentage of total shares they were assigned.
  *
  * `UBTSplitter` follows a _pull payment_ model. This means that payments are not automatically forwarded to the
  * accounts but kept in this contract, and the actual transfer is triggered as a separate step by calling the {release}
  * function.
- *
- * NOTE: This contract assumes that ERC20 tokens will behave similarly to native tokens (Ether). Rebasing tokens, and
- * tokens that apply fees during transfers, are likely to not be supported as expected. If in doubt, we encourage you
- * to run tests before sending real value to this contract.
  */
 contract UBTSplitter is Context, Ownable {
-    using Address for address;
-
     event PayeeAdded(
         address revenueAddress,
         address stakingAddress,
@@ -69,6 +66,7 @@ contract UBTSplitter is Context, Ownable {
 
     uint256 public ubtTotalReleased;
     mapping(address => uint256) public ubtReleased;
+    mapping(uint256 => mapping (address => uint256)) public ubtReleasedPerRecipientInPeriods;
     
     uint256 public ubtToBeReleasedInPeriod;
     uint256 public ubtNotReleasedInLastPeriods;
@@ -76,15 +74,6 @@ contract UBTSplitter is Context, Ownable {
 
     address public whitelistedToken;
 
-    mapping(uint256 => mapping (address => uint256)) public ubtReleasedPerRecipientInPeriods;
-
-    /**
-     * @dev Creates an instance of `UBTSplitter` where each account in `payees` is assigned the number of shares at
-     * the matching position in the `shares` array.
-     *
-     * All addresses in `payees` must be non-zero. Both arrays must have the same non-zero length, and there must be no
-     * duplicates in `payees`.
-     */
     constructor(address token) {
         whitelistedToken = token;
     }
@@ -110,9 +99,9 @@ contract UBTSplitter is Context, Ownable {
     }
 
     /**
-     * @dev Add token deposit to the contract.
+     * @dev Add token deposit to the contract and emit event.
      * @param amount The amount of the token.
-     * @param baseledgerDestinationAddress The destination address.
+     * @param baseledgerDestinationAddress The baseledger destination address.
      */
     function deposit(
         uint256 amount,
@@ -120,7 +109,7 @@ contract UBTSplitter is Context, Ownable {
     ) public emptyString(baseledgerDestinationAddress) {
         require(
             amount > 0,
-            "amount should be grater than zero"
+            "amount should be greater than zero"
         );
         lastEventNonce = lastEventNonce + 1;
 
@@ -138,11 +127,14 @@ contract UBTSplitter is Context, Ownable {
     }
 
     /**
-     * @dev Triggers a transfer to `account` of the amount of `token` tokens they are owed, according to their
-     * percentage of the total shares and their previous withdrawals. `token` must be the address of an IERC20
-     * contract.
+     * @dev Triggers a transfer to `msg.sender` of the amount of UBT tokens they are owed, according to their
+     * percentage of the total shares and their previous withdrawals in current period since last payee update.
      */
     function release() public virtual {
+        require(
+            payees[msg.sender] == true,
+            "msg.sender is not payee"
+        );
         require(
             shares[msg.sender] > 0,
             "msg.sender has no shares"
@@ -153,13 +145,12 @@ contract UBTSplitter is Context, Ownable {
         uint256 payment = (shares[msg.sender] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
         require(payment != 0, "msg.sender is not due payment");
+        SafeERC20.safeTransfer(IERC20(whitelistedToken), msg.sender, payment);
 
         ubtReleased[msg.sender] += payment;
         ubtTotalReleased += payment;
-        
         ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][msg.sender] += payment;
 
-        SafeERC20.safeTransfer(IERC20(whitelistedToken), msg.sender, payment);
         emit UbtPaymentReleased(
             IERC20(whitelistedToken),
             msg.sender,
@@ -208,7 +199,7 @@ contract UBTSplitter is Context, Ownable {
     }
 
     /**
-     * @dev Add a new payee to the contract.
+     * @dev Updates existing payee.
      * @param revenueAddress The revenue address.
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.

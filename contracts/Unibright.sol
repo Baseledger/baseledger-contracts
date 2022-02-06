@@ -2,7 +2,7 @@
 // OpenZeppelin Contracts v4.4.1 (finance/UBTSplitter.sol)
 
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -144,12 +144,12 @@ contract UBTSplitter is Context, Ownable {
         uint256 toBeReleased = ubtToBeReleasedInPeriod + ubtNotReleasedInLastPeriods;
         uint256 payment = (shares[msg.sender] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
-        require(payment != 0, "msg.sender is not due payment");
-        SafeERC20.safeTransfer(IERC20(whitelistedToken), msg.sender, payment);
-
         ubtReleased[msg.sender] += payment;
         ubtTotalReleased += payment;
         ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][msg.sender] += payment;
+
+        require(payment != 0, "msg.sender is not due payment");
+        IERC20(whitelistedToken).transfer(msg.sender, payment);
 
         emit UbtPaymentReleased(
             IERC20(whitelistedToken),

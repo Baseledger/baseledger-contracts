@@ -21,7 +21,10 @@ describe("UBTSplitter contract tests", () => {
   let ubtMockAddress: string;
   let accounts;
   let revenue1Address: string;
+  let revenue1Account: Signer;
   let revenue2Address: string;
+  let revenue2Account: Signer;
+  let revenue3Account: Signer;
   let stakingAddress: string;
   let maliciousAccount: Signer;
   let nonExistentPayee: string;
@@ -35,7 +38,10 @@ describe("UBTSplitter contract tests", () => {
   before(async () => {
     accounts = await ethers.getSigners();
     revenue1Address = await accounts[0].getAddress();
+    revenue1Account = await accounts[0];
     revenue2Address = await accounts[1].getAddress();
+    revenue2Account = await accounts[1];
+    revenue3Account = await accounts[3];
     stakingAddress = await accounts[2].getAddress();
     nonExistentPayee = await accounts[5].getAddress();
 
@@ -372,8 +378,8 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should release amount of tokens based on share with equal shares", async () => {
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         fiveTokens
       );
@@ -382,10 +388,16 @@ describe("UBTSplitter contract tests", () => {
       );
     });
 
+    it("Should not release if sender has no shares", async () => {
+      await expect(
+        UBTContract.connect(maliciousAccount).release()
+      ).to.be.revertedWith("msg.sender has no shares");
+    });
+
     it("Should release amount of tokens based on share with equal shares after 3rd payee is added", async () => {
       // 2 payees and 10 ubt deposited
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
       // after release they each have 5 ubt
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         fiveTokens
@@ -416,9 +428,9 @@ describe("UBTSplitter contract tests", () => {
       );
 
       // all 3 release again
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
-      await UBTContract.release(revenue3Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
+      await UBTContract.connect(revenue3Account).release();
 
       // check total released for all 3, first 2 should have 5 more than 3rd one
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
@@ -441,14 +453,14 @@ describe("UBTSplitter contract tests", () => {
         shares.twentyFive,
         baseledgervaloper
       );
-      await UBTContract.release(revenue1Address);
+      await UBTContract.connect(revenue1Account).release();
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         threePointThreeInPeriodTokens
       );
     });
 
     it("Should release token, update share, send new token amount and then release right amount of tokens", async () => {
-      await UBTContract.release(revenue1Address);
+      await UBTContract.connect(revenue1Account).release();
 
       await UBTContract.updatePayee(
         revenue1Address,
@@ -468,7 +480,7 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      await UBTContract.release(revenue1Address);
+      await UBTContract.connect(revenue1Account).release();
 
       // only first one released before updatePayee was called
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
@@ -480,8 +492,8 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should BOTH release token, update share, send new token amount and then BOTH release right amount of tokens", async () => {
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         fiveTokens
@@ -509,8 +521,8 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       // since they both released in correct order, update payee is reflected on follow up release
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
@@ -524,7 +536,7 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should emit event, when release function is called", async () => {
-      expect(await UBTContract.release(revenue1Address))
+      expect(await UBTContract.connect(revenue1Account).release())
         .to.emit(UBTContract, "UbtPaymentReleased")
         .withArgs(ubtMockAddress, revenue1Address, stakingAddress, fiveTokens);
     });
@@ -536,16 +548,16 @@ describe("UBTSplitter contract tests", () => {
         shares.zero,
         baseledgervaloper
       );
-      await expect(UBTContract.release(revenue1Address)).to.be.revertedWith(
-        "revenueAddress has no shares"
-      );
+      await expect(
+        UBTContract.connect(revenue1Account).release()
+      ).to.be.revertedWith("msg.sender has no shares");
     });
 
     it("Should fail on try to release on validator without due payment", async () => {
-      await UBTContract.release(revenue1Address);
-      await expect(UBTContract.release(revenue1Address)).to.be.revertedWith(
-        "revenueAddress is not due payment"
-      );
+      await UBTContract.connect(revenue1Account).release();
+      await expect(
+        UBTContract.connect(revenue1Account).release()
+      ).to.be.revertedWith("msg.sender is not due payment");
     });
   });
 
@@ -577,8 +589,8 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should release amount of tokens based on not equal shares", async () => {
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         formatTokens("30")
@@ -589,8 +601,8 @@ describe("UBTSplitter contract tests", () => {
     });
 
     it("Should release amount of tokens based on share with equal shares after 3rd payee is added", async () => {
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       accounts = await ethers.getSigners();
       const revenue3Address = await accounts[3].getAddress();
@@ -610,9 +622,9 @@ describe("UBTSplitter contract tests", () => {
       );
 
       // all 3 release again
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
-      await UBTContract.release(revenue3Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
+      await UBTContract.connect(revenue3Account).release();
 
       // first got 30 in first release, 10 in second (60 * 20 / 120)
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
@@ -638,8 +650,8 @@ describe("UBTSplitter contract tests", () => {
         shares.twenty,
         baseledgervaloper
       );
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         formatTokens("37.5")
@@ -655,8 +667,8 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         formatTokens("52.5")
@@ -668,7 +680,7 @@ describe("UBTSplitter contract tests", () => {
 
     it("Should release token, update share, send new token amount and then release right amount of tokens", async () => {
       // only first one release and then update happens before 2nd one releases, 50 deposited
-      await UBTContract.release(revenue1Address);
+      await UBTContract.connect(revenue1Account).release();
 
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         formatTokens("30")
@@ -691,8 +703,8 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       // because only first released before update, 20 unreleased ubts remained,
       // so now 40 ubts are splitted with 60/25 shares
@@ -710,8 +722,8 @@ describe("UBTSplitter contract tests", () => {
 
     it("Should BOTH release token, update share, send new token amount and then BOTH release right amount of tokens", async () => {
       // both releases, 50 deposited, 60/40 shares
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
         formatTokens("30")
@@ -734,8 +746,8 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      await UBTContract.release(revenue1Address);
-      await UBTContract.release(revenue2Address);
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
 
       // both released, now only 20 deposited are split according to new shares 60/25
 

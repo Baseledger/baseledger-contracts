@@ -112,7 +112,7 @@ describe("UBTSplitter contract tests", () => {
           zeroToken,
           destinationAddress
         )
-      ).to.be.revertedWith("amount should be grater than zero");
+      ).to.be.revertedWith("amount should be greater than zero");
     });
   });
 
@@ -388,9 +388,21 @@ describe("UBTSplitter contract tests", () => {
       );
     });
 
-    it("Should not release if sender has no shares", async () => {
+    it("Should not release if sender is not payee", async () => {
       await expect(
         UBTContract.connect(maliciousAccount).release()
+      ).to.be.revertedWith("msg.sender is not payee");
+    });
+
+    it("Should not release if sender has no shares", async () => {
+      await UBTContract.updatePayee(
+        revenue1Address,
+        stakingAddress,
+        shares.zero,
+        baseledgervaloper
+      );
+      await expect(
+        UBTContract.connect(revenue1Account).release()
       ).to.be.revertedWith("msg.sender has no shares");
     });
 

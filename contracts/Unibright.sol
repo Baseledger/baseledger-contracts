@@ -142,28 +142,28 @@ contract UBTSplitter is Context, Ownable {
      * percentage of the total shares and their previous withdrawals. `token` must be the address of an IERC20
      * contract.
      */
-    function release(address revenueAddress) public virtual {
+    function release() public virtual {
         require(
-            shares[revenueAddress] > 0,
-            "revenueAddress has no shares"
+            shares[msg.sender] > 0,
+            "msg.sender has no shares"
         );
    
-        uint256 alreadyReceivedSinceLastPayeeUpdate = ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][revenueAddress];
+        uint256 alreadyReceivedSinceLastPayeeUpdate = ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][msg.sender];
         uint256 toBeReleased = ubtToBeReleasedInPeriod + ubtNotReleasedInLastPeriod;
-        uint256 payment = (shares[revenueAddress] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
+        uint256 payment = (shares[msg.sender] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
-        require(payment != 0, "revenueAddress is not due payment");
+        require(payment != 0, "msg.sender is not due payment");
 
-        ubtReleased[revenueAddress] += payment;
+        ubtReleased[msg.sender] += payment;
         ubtTotalReleased += payment;
         
-        ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][revenueAddress] += payment;
+        ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][msg.sender] += payment;
 
-        SafeERC20.safeTransfer(IERC20(whitelistedToken), revenueAddress, payment);
+        SafeERC20.safeTransfer(IERC20(whitelistedToken), msg.sender, payment);
         emit UbtPaymentReleased(
             IERC20(whitelistedToken),
-            revenueAddress,
-            validatorStakingAddress[revenueAddress],
+            msg.sender,
+            validatorStakingAddress[msg.sender],
             payment
         );
     }

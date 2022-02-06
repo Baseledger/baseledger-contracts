@@ -65,7 +65,7 @@ contract UBTSplitter is Context, Ownable {
 
     mapping(address => uint256) public shares;
     mapping(address => address) public validatorStakingAddress; // revenueAddress => validatorStakingAddress
-    address[] public payees;
+    mapping(address => bool) public payees;
 
     uint256 public ubtTotalReleased;
     mapping(address => uint256) public ubtReleased;
@@ -149,8 +149,7 @@ contract UBTSplitter is Context, Ownable {
         );
    
         uint256 alreadyReceivedSinceLastPayeeUpdate = ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][revenueAddress];
-        uint256 toBeReleased = ubtToBeReleasedInPeriod;        
-        toBeReleased += ubtNotReleasedInLastPeriod;
+        uint256 toBeReleased = ubtToBeReleasedInPeriod + ubtNotReleasedInLastPeriod;
         uint256 payment = (shares[revenueAddress] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
         require(payment != 0, "revenueAddress is not due payment");
@@ -194,7 +193,7 @@ contract UBTSplitter is Context, Ownable {
             "revenueAddress already has shares"
         );
 
-        payees.push(revenueAddress);
+        payees[revenueAddress] = true;
         validatorStakingAddress[revenueAddress] = stakingAddress;
         shares[revenueAddress] = shares_;
         totalShares = totalShares + shares_;
@@ -234,6 +233,10 @@ contract UBTSplitter is Context, Ownable {
         zeroAddress(stakingAddress)
         emptyString(baseledgervaloper)
     {
+        require(
+            payees[revenueAddress] == true,
+            "payee does not exist"
+        );
         totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
 
         validatorStakingAddress[revenueAddress] = stakingAddress;

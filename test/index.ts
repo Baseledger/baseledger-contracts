@@ -24,6 +24,7 @@ describe("UBTSplitter contract tests", () => {
   let revenue2Address: string;
   let stakingAddress: string;
   let maliciousAccount: Signer;
+  let nonExistentPayee: string;
   let tokenSenderAccount: Signer;
   let tokenSenderAddress: string;
   const baseledgervaloper = "Testing String";
@@ -36,6 +37,7 @@ describe("UBTSplitter contract tests", () => {
     revenue1Address = await accounts[0].getAddress();
     revenue2Address = await accounts[1].getAddress();
     stakingAddress = await accounts[2].getAddress();
+    nonExistentPayee = await accounts[5].getAddress();
 
     tokenSenderAccount = await accounts[3];
     tokenSenderAddress = await accounts[3].getAddress();
@@ -95,7 +97,7 @@ describe("UBTSplitter contract tests", () => {
     it("Should fail on transfer token with empty token destination address", async () => {
       await expect(
         UBTContract.connect(tokenSenderAccount).deposit(tenTokens, "")
-      ).to.be.revertedWith("UBTSplitter: String is empty");
+      ).to.be.revertedWith("string is empty");
     });
 
     it("Should fail on transfer zero token amount", async () => {
@@ -104,7 +106,7 @@ describe("UBTSplitter contract tests", () => {
           zeroToken,
           destinationAddress
         )
-      ).to.be.revertedWith("UBTSplitter: amount should be grater than zero");
+      ).to.be.revertedWith("amount should be grater than zero");
     });
   });
 
@@ -130,7 +132,7 @@ describe("UBTSplitter contract tests", () => {
           depositNonce,
           timestamp
         );
-      expect(await UBTContract.payees(0)).to.equal(revenue1Address);
+      expect(await UBTContract.payees(revenue1Address)).to.equal(true);
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.fifty);
       expect(await UBTContract.totalShares()).to.equal(shares.fifty);
     });
@@ -159,7 +161,7 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty,
           baseledgervaloper
         )
-      ).to.be.revertedWith("UBTSplitter: Address is zero address");
+      ).to.be.revertedWith("address is zero address");
     });
 
     it("Should fail on add validator with zero stakingAddress address", async () => {
@@ -170,7 +172,7 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty,
           baseledgervaloper
         )
-      ).to.be.revertedWith("UBTSplitter: Address is zero address");
+      ).to.be.revertedWith("address is zero address");
     });
 
     it("Should fail on add validator with zero share", async () => {
@@ -181,13 +183,13 @@ describe("UBTSplitter contract tests", () => {
           shares.zero,
           baseledgervaloper
         )
-      ).to.be.revertedWith("UBTSplitter: shares are 0");
+      ).to.be.revertedWith("shares are 0");
     });
 
     it("Should fail on add validator with empty baseledgervaloper string", async () => {
       await expect(
         UBTContract.addPayee(revenue1Address, stakingAddress, shares.fifty, "")
-      ).to.be.revertedWith("UBTSplitter: String is empty");
+      ).to.be.revertedWith("string is empty");
     });
 
     it("Should fail on add validator with already allocated share", async () => {
@@ -204,7 +206,7 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty,
           baseledgervaloper
         )
-      ).to.be.revertedWith("UBTSplitter: revenueAddress already has shares");
+      ).to.be.revertedWith("revenueAddress already has shares");
     });
 
     it("Should fail if malicious account tries to add validator ", async () => {
@@ -255,8 +257,8 @@ describe("UBTSplitter contract tests", () => {
           depositNonce,
           timestamp
         );
-      expect(await UBTContract.payees(0)).to.equal(revenue1Address);
-      expect(await UBTContract.payees(1)).to.equal(revenue2Address);
+      expect(await UBTContract.payees(revenue1Address)).to.equal(true);
+      expect(await UBTContract.payees(revenue2Address)).to.equal(true);
       expect(await UBTContract.shares(revenue1Address)).to.equal(
         shares.hundred
       );
@@ -297,7 +299,7 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty,
           baseledgervaloper
         )
-      ).to.be.revertedWith("UBTSplitter: Address is zero address");
+      ).to.be.revertedWith("address is zero address");
     });
 
     it("Should fail on update validator with zero staking address", async () => {
@@ -308,7 +310,7 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty,
           baseledgervaloper
         )
-      ).to.be.revertedWith("UBTSplitter: Address is zero address");
+      ).to.be.revertedWith("address is zero address");
     });
 
     it("Should fail on update validator with empty baseledgervaloper string", async () => {
@@ -319,7 +321,7 @@ describe("UBTSplitter contract tests", () => {
           shares.fifty,
           ""
         )
-      ).to.be.revertedWith("UBTSplitter: String is empty");
+      ).to.be.revertedWith("string is empty");
     });
 
     it("Should fail if malicious account tries to update validator ", async () => {
@@ -331,6 +333,17 @@ describe("UBTSplitter contract tests", () => {
           baseledgervaloper
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("Should fail if payee does not exist", async () => {
+      await expect(
+        UBTContract.updatePayee(
+          nonExistentPayee,
+          stakingAddress,
+          shares.fifty,
+          baseledgervaloper
+        )
+      ).to.be.revertedWith("payee does not exist");
     });
   });
 
@@ -524,14 +537,14 @@ describe("UBTSplitter contract tests", () => {
         baseledgervaloper
       );
       await expect(UBTContract.release(revenue1Address)).to.be.revertedWith(
-        "UBTSplitter: revenueAddress has no shares"
+        "revenueAddress has no shares"
       );
     });
 
     it("Should fail on try to release on validator without due payment", async () => {
       await UBTContract.release(revenue1Address);
       await expect(UBTContract.release(revenue1Address)).to.be.revertedWith(
-        "UBTSplitter: revenueAddress is not due payment"
+        "revenueAddress is not due payment"
       );
     });
   });

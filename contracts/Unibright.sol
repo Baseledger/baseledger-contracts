@@ -71,7 +71,7 @@ contract UBTSplitter is Context, Ownable {
     mapping(address => uint256) public ubtReleased;
     
     uint256 public ubtToBeReleasedInPeriod;
-    uint256 public ubtNotReleasedInLastPeriod;
+    uint256 public ubtNotReleasedInLastPeriods;
     uint256 public ubtCurrentPeriod;
 
     address public whitelistedToken;
@@ -149,7 +149,7 @@ contract UBTSplitter is Context, Ownable {
         );
    
         uint256 alreadyReceivedSinceLastPayeeUpdate = ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][msg.sender];
-        uint256 toBeReleased = ubtToBeReleasedInPeriod + ubtNotReleasedInLastPeriod;
+        uint256 toBeReleased = ubtToBeReleasedInPeriod + ubtNotReleasedInLastPeriods;
         uint256 payment = (shares[msg.sender] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
         require(payment != 0, "msg.sender is not due payment");
@@ -256,6 +256,6 @@ contract UBTSplitter is Context, Ownable {
 
         ubtToBeReleasedInPeriod = 0;
         ubtCurrentPeriod += 1;
-        ubtNotReleasedInLastPeriod = IERC20(whitelistedToken).balanceOf(address(this));
+        ubtNotReleasedInLastPeriods = IERC20(whitelistedToken).balanceOf(address(this));
     }
 }

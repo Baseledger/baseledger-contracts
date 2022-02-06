@@ -194,15 +194,8 @@ contract UBTSplitter is Context, Ownable {
         require(shares_ > 0, "shares are 0");
 
         payees[revenueAddress] = true;
-        validatorStakingAddress[revenueAddress] = stakingAddress;
-        shares[revenueAddress] = shares_;
-        totalShares = totalShares + shares_;
-        lastEventNonce = lastEventNonce + 1;
 
-        ubtToBeReleasedInPeriod = 0;
-        ubtCurrentPeriod += 1;
-        ubtNotReleasedInLastPeriod = IERC20(whitelistedToken).balanceOf(address(this));
-        
+        _updatePayeeSharesAndCurrentPeriod(revenueAddress, stakingAddress, shares_);
 
         emit PayeeAdded(
             revenueAddress,
@@ -239,14 +232,7 @@ contract UBTSplitter is Context, Ownable {
         );
         totalShares = totalShares - shares[revenueAddress]; // remove the current share of the account from total shares.
 
-        validatorStakingAddress[revenueAddress] = stakingAddress;
-        shares[revenueAddress] = shares_;
-        totalShares = totalShares + shares_; // add the new share of the account to total shares.
-        lastEventNonce = lastEventNonce + 1;
-
-        ubtToBeReleasedInPeriod = 0;
-        ubtCurrentPeriod += 1;
-        ubtNotReleasedInLastPeriod = IERC20(whitelistedToken).balanceOf(address(this));
+        _updatePayeeSharesAndCurrentPeriod(revenueAddress, stakingAddress, shares_);
 
         emit PayeeUpdated(
             revenueAddress,
@@ -256,5 +242,20 @@ contract UBTSplitter is Context, Ownable {
             lastEventNonce,
             block.timestamp
         );
+    }
+
+    function _updatePayeeSharesAndCurrentPeriod(
+        address revenueAddress,
+        address stakingAddress,
+        uint256 shares_
+    ) private {
+        validatorStakingAddress[revenueAddress] = stakingAddress;
+        shares[revenueAddress] = shares_;
+        totalShares = totalShares + shares_;
+        lastEventNonce = lastEventNonce + 1;
+
+        ubtToBeReleasedInPeriod = 0;
+        ubtCurrentPeriod += 1;
+        ubtNotReleasedInLastPeriod = IERC20(whitelistedToken).balanceOf(address(this));
     }
 }

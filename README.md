@@ -44,3 +44,22 @@ npx hardhat verify --network ropsten DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
 # Performance optimizations
 
 For faster runs of your tests and scripts, consider skipping ts-node's type checking by setting the environment variable `TS_NODE_TRANSPILE_ONLY` to `1` in hardhat's environment. For more details see [the documentation](https://hardhat.org/guides/typescript.html#performance-optimizations).
+
+# Deploy UBTMock erc20 and UBTSplitter contracts
+
+Deploy script will also allow 100 tokens to be deposited to baseledger bridge
+```shell
+npx hardhat node
+
+npm run contracts:migrate:local
+```
+
+# Test deposit event
+
+```shell
+npx hardhat console --network localhost
+
+const Baseledger = await ethers.getContractFactory("BaseledgerTest")
+const baseledger = await Baseledger.attach(BASELEDGER_CONTRACT_ADDRESS)
+
+await baseledger.deposit(1, COSMOS_WALLET_ADDRESS)

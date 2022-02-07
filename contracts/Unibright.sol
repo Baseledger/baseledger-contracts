@@ -25,20 +25,23 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract BaseledgerUBTSplitter is Context, Ownable {
     event PayeeAdded(
+        address token,
         address revenueAddress,
-        address stakingAddress,
-        uint256 shares,
         string baseledgerValidatorAddress,
+        uint256 shares,
         uint256 lastEventNonce,
+        address stakingAddress,
         uint256 timestamp
     );
 
     event PayeeUpdated(
+        address token,
         address revenueAddress,
-        address stakingAddress,
-        uint256 shares,
         string baseledgerValidatorAddress,
+
+        uint256 shares,
         uint256 lastEventNonce,
+        address stakingAddress,
         uint256 timestamp
     );
 
@@ -50,11 +53,12 @@ contract BaseledgerUBTSplitter is Context, Ownable {
     );
 
     event UbtDeposited(
-        address sender,
         address token,
+        address sender,
+        string destinationAddress,
+
         uint256 tokenAmount,
-        uint256 lastEventNonce,
-        string destinationAddress
+        uint256 lastEventNonce
     );
 
     uint256 public totalShares;
@@ -117,11 +121,11 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         );
 
         emit UbtDeposited(
+            whitelistedToken,
             msg.sender,
-            ubtTokenContractAddress,
+            baseledgerDestinationAddress,
             amount,
-            lastEventNonce,
-            baseledgerDestinationAddress
+            lastEventNonce
         );
     }
 
@@ -190,11 +194,12 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         );
 
         emit PayeeAdded(
+            whitelistedToken,
             revenueAddress,
-            stakingAddress,
-            shares_,
             baseledgerValidatorAddress,
+            shares_,
             lastEventNonce,
+            stakingAddress,
             block.timestamp
         );
     }
@@ -228,11 +233,12 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         );
 
         emit PayeeUpdated(
+            whitelistedToken,
             revenueAddress,
-            stakingAddress,
-            shares_,
             baseledgerValidatorAddress,
+            shares_,
             lastEventNonce,
+            stakingAddress,
             block.timestamp
         );
     }

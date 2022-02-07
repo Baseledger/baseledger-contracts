@@ -11,6 +11,7 @@
     "contracts:format-fix": "npx prettier '**/*.{json,sol,md}' --write",
     "format": "chmod u+x format.sh && ./format.sh",
     "contracts:migrate:mainnet": "env-cmd --silent -f .env.dev npx hardhat deploy-contracts --network mainnet",
+    "contracts:migrate:local": "npx hardhat deploy-contracts-dev --network localhost",
     "contracts:verify:mainnet": "env-cmd --silent -f .env.dev npx hardhat verify-contracts --network mainnet"
   },
   "devDependencies": {

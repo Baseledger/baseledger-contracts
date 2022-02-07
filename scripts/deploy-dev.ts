@@ -29,4 +29,7 @@ export async function deployContractsDev() {
   )) as UBTSplitter;
   await UBTSplitter.deployed();
   console.log(`Unibright contract deployed at: ${UBTSplitter.address}`);
+
+  console.log(`Approving 100 tokens for dev purpose to ${deployer.address}`);
+  await UBTMock.approve(UBTSplitter.address, 100);
 }

@@ -24,6 +24,7 @@ describe("UBTSplitter contract tests", () => {
   let revenue1Account: Signer;
   let revenue2Address: string;
   let revenue2Account: Signer;
+  let revenue3Address: string;
   let revenue3Account: Signer;
   let stakingAddress: string;
   let maliciousAccount: Signer;
@@ -41,6 +42,7 @@ describe("UBTSplitter contract tests", () => {
     revenue1Account = await accounts[0];
     revenue2Address = await accounts[1].getAddress();
     revenue2Account = await accounts[1];
+    revenue3Address = await accounts[3].getAddress();
     revenue3Account = await accounts[3];
     stakingAddress = await accounts[2].getAddress();
     nonExistentPayee = await accounts[5].getAddress();
@@ -715,6 +717,10 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
+      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+        formatTokens("20")
+      );
+
       await UBTContract.connect(revenue1Account).release();
       await UBTContract.connect(revenue2Account).release();
 
@@ -729,6 +735,122 @@ describe("UBTSplitter contract tests", () => {
       // 0 + 25 * 40 / 85
       expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
         formatTokens("11.764705882352941176")
+      );
+    });
+
+    it("Should release token, add new payee, send new token amount and then all release right amount of tokens", async () => {
+      // only first one release and then update happens before 2nd one releases, 50 deposited
+      await UBTContract.connect(revenue1Account).release();
+
+      expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
+        formatTokens("30")
+      );
+
+      expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
+        formatTokens("0")
+      );
+
+      await UBTContract.addPayee(
+        revenue3Address,
+        stakingAddress,
+        shares.twentyFive,
+        baseledgervaloper
+      );
+
+      // deposit 20 more ubt and release again
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        formatTokens("20"),
+        destinationAddress
+      );
+
+      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+        formatTokens("20")
+      );
+
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
+      await UBTContract.connect(revenue3Account).release();
+
+      // because only first released before update, 20 unreleased ubts remained,
+      // so now 40 ubts are splitted with 60/40/25 shares
+
+      // 30 + 60 * 40 / 125
+      expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
+        formatTokens("49.2")
+      );
+
+      // 0 + 40 * 40 / 125
+      expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
+        formatTokens("12.8")
+      );
+
+      // 0 + 25 * 40 / 125
+      expect(await UBTContract.ubtReleased(revenue3Address)).to.equal(
+        formatTokens("8")
+      );
+    });
+
+    it("Should release token, add and update new payee (2 periods), send new token amount and then all release right amount of tokens", async () => {
+      // only first one release and then update happens before 2nd one releases, 50 deposited
+      await UBTContract.connect(revenue1Account).release();
+
+      expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
+        formatTokens("30")
+      );
+
+      expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
+        formatTokens("0")
+      );
+
+      await UBTContract.addPayee(
+        revenue3Address,
+        stakingAddress,
+        shares.twentyFive,
+        baseledgervaloper
+      );
+
+      // deposit 20 more ubt and release again
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        formatTokens("20"),
+        destinationAddress
+      );
+
+      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+        formatTokens("20")
+      );
+
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
+
+      await UBTContract.updatePayee(
+        revenue3Address,
+        stakingAddress,
+        shares.twenty,
+        baseledgervaloper
+      );
+
+      // first released before 1st update, first and second released before 2nd update, 3rd release after 2nd update
+      // 30 + 60 * 40 / 125
+      expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
+        formatTokens("49.2")
+      );
+
+      // 0 + 40 * 40 / 125
+      expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
+        formatTokens("12.8")
+      );
+
+      // 40 - 19.2 - 12.8
+      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+        formatTokens("8")
+      );
+
+      await UBTContract.connect(revenue3Account).release();
+
+      // 3rd only releases after 2 updates
+      // 0 + 20 * 8 / 120
+      expect(await UBTContract.ubtReleased(revenue3Address)).to.equal(
+        formatTokens("1.333333333333333333")
       );
     });
 
@@ -758,6 +880,10 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
+      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+        formatTokens("0")
+      );
+
       await UBTContract.connect(revenue1Account).release();
       await UBTContract.connect(revenue2Account).release();
 
@@ -771,6 +897,58 @@ describe("UBTSplitter contract tests", () => {
       // 20 + 25 * 20 / 85
       expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
         formatTokens("25.882352941176470588")
+      );
+    });
+
+    it("Should BOTH release token, add payee, send new token amount and then all three release right amount of tokens", async () => {
+      // both releases, 50 deposited, 60/40 shares
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
+
+      expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
+        formatTokens("30")
+      );
+
+      expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
+        formatTokens("20")
+      );
+
+      await UBTContract.addPayee(
+        revenue3Address,
+        stakingAddress,
+        shares.twentyFive,
+        baseledgervaloper
+      );
+
+      // deposit 20 more ubt and release again
+      await UBTContract.connect(tokenSenderAccount).deposit(
+        formatTokens("20"),
+        destinationAddress
+      );
+
+      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+        formatTokens("0")
+      );
+
+      await UBTContract.connect(revenue1Account).release();
+      await UBTContract.connect(revenue2Account).release();
+      await UBTContract.connect(revenue3Account).release();
+
+      // both released, now only 20 deposited are split according to new shares 60/40/25
+
+      // 30 + 60 * 20 / 125
+      expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
+        formatTokens("39.6")
+      );
+
+      // 20 + 40 * 20 / 125
+      expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
+        formatTokens("26.4")
+      );
+
+      // 0 + 25 * 20 / 125
+      expect(await UBTContract.ubtReleased(revenue3Address)).to.equal(
+        formatTokens("4")
       );
     });
   });

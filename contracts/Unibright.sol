@@ -38,7 +38,6 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         address token,
         address revenueAddress,
         string baseledgerValidatorAddress,
-
         uint256 shares,
         uint256 lastEventNonce,
         address stakingAddress,
@@ -53,10 +52,9 @@ contract BaseledgerUBTSplitter is Context, Ownable {
     );
 
     event UbtDeposited(
-        address token,
-        address sender,
-        string destinationAddress,
-
+        address indexed token,
+        address indexed sender,
+        string baseledgerDestinationAddress,
         uint256 tokenAmount,
         uint256 lastEventNonce
     );

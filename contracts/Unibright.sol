@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @dev This contract allows to split UBT payments among a group of accounts. The sender does not need to be aware
  * that the UBT will be split in this way, since it is handled transparently by the contract.
  * Contract is based on PaymentSplitter, but difference is that in PaymentSplitter payees are added only once in constructor,
- * but here can be added and update later. Because of this, contract needs to track release amount since the last payee update.
+ * but here can be added and updated later. Because of this, contract needs to track release amount since the last payee update.
  * Offchain solution should take care of notifying payees to pull their funds before payees are added or updated. 
  *
  * The split can be in equal parts or in any other arbitrary proportion. The way this is specified is by assigning each
@@ -28,7 +28,7 @@ contract UBTSplitter is Context, Ownable {
         address revenueAddress,
         address stakingAddress,
         uint256 shares,
-        string baseledgervaloper,
+        string baseledgerValidatorAddress,
         uint256 lastEventNonce,
         uint256 timestamp
     );
@@ -37,7 +37,7 @@ contract UBTSplitter is Context, Ownable {
         address revenueAddress,
         address stakingAddress,
         uint256 shares,
-        string baseledgervaloper,
+        string baseledgerValidatorAddress,
         uint256 lastEventNonce,
         uint256 timestamp
     );
@@ -61,11 +61,12 @@ contract UBTSplitter is Context, Ownable {
     uint256 public lastEventNonce;
 
     mapping(address => uint256) public shares;
-    mapping(address => address) public validatorStakingAddress; // revenueAddress => validatorStakingAddress
+    mapping(address => address) public stakingAddresses;
+    mapping(address => uint256) public ubtReleased;
+
     mapping(address => bool) public payees;
 
     uint256 public ubtTotalReleased;
-    mapping(address => uint256) public ubtReleased;
     mapping(uint256 => mapping (address => uint256)) public ubtReleasedPerRecipientInPeriods;
     
     uint256 public ubtToBeReleasedInPeriod;
@@ -81,16 +82,16 @@ contract UBTSplitter is Context, Ownable {
     /**
      * @dev Modifier for checking for zero address
      */
-    modifier zeroAddress(address token) {
-        require(token != address(0), "address is zero address");
+    modifier zeroAddress(address address_) {
+        require(address_ != address(0), "address is zero address");
         _;
     }
 
     /**
      * @dev Modifier for checking for empty string
      */
-    modifier emptyString(string memory baseledgervaloper) {
-        bytes memory tempEmptyStringTest = bytes(baseledgervaloper);
+    modifier emptyString(string memory str) {
+        bytes memory tempEmptyStringTest = bytes(str);
         require(
             tempEmptyStringTest.length != 0,
             "string is empty"
@@ -111,8 +112,7 @@ contract UBTSplitter is Context, Ownable {
             amount > 0,
             "amount should be greater than zero"
         );
-        lastEventNonce = lastEventNonce + 1;
-
+        lastEventNonce += 1;
         ubtToBeReleasedInPeriod += amount;
 
         IERC20(whitelistedToken).transferFrom(msg.sender, address(this), amount);
@@ -154,7 +154,7 @@ contract UBTSplitter is Context, Ownable {
         emit UbtPaymentReleased(
             IERC20(whitelistedToken),
             msg.sender,
-            validatorStakingAddress[msg.sender],
+            stakingAddresses[msg.sender],
             payment
         );
     }
@@ -164,19 +164,19 @@ contract UBTSplitter is Context, Ownable {
      * @param revenueAddress The revenue address.
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
-     * @param baseledgervaloper Identifier for the node within baseledger.
+     * @param baseledgerValidatorAddress Identifier for the node within baseledger.
      */
     function addPayee(
         address revenueAddress,
         address stakingAddress,
         uint256 shares_,
-        string memory baseledgervaloper
+        string memory baseledgerValidatorAddress
     )
         public
         onlyOwner
         zeroAddress(revenueAddress)
         zeroAddress(stakingAddress)
-        emptyString(baseledgervaloper)
+        emptyString(baseledgerValidatorAddress)
     {
         require(
             payees[revenueAddress] == false,
@@ -192,7 +192,7 @@ contract UBTSplitter is Context, Ownable {
             revenueAddress,
             stakingAddress,
             shares_,
-            baseledgervaloper,
+            baseledgerValidatorAddress,
             lastEventNonce,
             block.timestamp
         );
@@ -203,19 +203,19 @@ contract UBTSplitter is Context, Ownable {
      * @param revenueAddress The revenue address.
      * @param stakingAddress The staking address.
      * @param shares_ The number of shares owned by the payee.
-     * @param baseledgervaloper Identifier for the node within baseledger.
+     * @param baseledgerValidatorAddress Identifier for the node within baseledger.
      */
     function updatePayee(
         address revenueAddress,
         address stakingAddress,
         uint256 shares_,
-        string memory baseledgervaloper
+        string memory baseledgerValidatorAddress
     )
         public
         onlyOwner
         zeroAddress(revenueAddress)
         zeroAddress(stakingAddress)
-        emptyString(baseledgervaloper)
+        emptyString(baseledgerValidatorAddress)
     {
         require(
             payees[revenueAddress] == true,
@@ -229,7 +229,7 @@ contract UBTSplitter is Context, Ownable {
             revenueAddress,
             stakingAddress,
             shares_,
-            baseledgervaloper,
+            baseledgerValidatorAddress,
             lastEventNonce,
             block.timestamp
         );
@@ -240,7 +240,7 @@ contract UBTSplitter is Context, Ownable {
         address stakingAddress,
         uint256 shares_
     ) private {
-        validatorStakingAddress[revenueAddress] = stakingAddress;
+        stakingAddresses[revenueAddress] = stakingAddress;
         shares[revenueAddress] = shares_;
         totalShares = totalShares + shares_;
         lastEventNonce = lastEventNonce + 1;

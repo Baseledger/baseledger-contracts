@@ -19,6 +19,13 @@ task("deploy-contracts", "Deploys contracts")
     await deployContracts(taskArgs.token);
   });
 
+task("deploy-contracts-dev", "Deploys contracts for development").setAction(
+  async () => {
+    const { deployContractsDev } = await lazyImport("./scripts/deploy-dev");
+    await deployContractsDev();
+  }
+);
+
 task("verify-contracts", "Verifies contracts")
   .addParam("contract", "The contract's address")
   .addParam("token", "The token's address")

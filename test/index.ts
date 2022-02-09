@@ -1,6 +1,6 @@
 import hre, { ethers } from "hardhat";
 import { expect } from "chai";
-import { UBTSplitter, UBTMock } from "../typechain";
+import { BaseledgerUBTSplitter, UBTMock } from "../typechain";
 import { ContractFactory } from "@ethersproject/contracts";
 import {
   tenTokens,
@@ -14,8 +14,8 @@ import {
 } from "./utils";
 import { Signer } from "ethers";
 
-describe("UBTSplitter contract tests", () => {
-  let UBTContract: UBTSplitter;
+describe("BaseledgerUBTSplitter contract tests", () => {
+  let UBTContract: BaseledgerUBTSplitter;
   let ubtMock: UBTMock;
   let UBTAddress: string;
   let ubtMockAddress: string;
@@ -54,7 +54,7 @@ describe("UBTSplitter contract tests", () => {
 
   beforeEach(async () => {
     const UBTFactory: ContractFactory = await hre.ethers.getContractFactory(
-      "UBTSplitter"
+      "BaseledgerUBTSplitter"
     );
     const ubtMockFactory: ContractFactory = await hre.ethers.getContractFactory(
       "UBTMock"
@@ -62,7 +62,9 @@ describe("UBTSplitter contract tests", () => {
     ubtMock = (await ubtMockFactory.deploy()) as UBTMock;
     await ubtMock.deployed();
     ubtMockAddress = ubtMock.address;
-    UBTContract = (await UBTFactory.deploy(ubtMockAddress)) as UBTSplitter;
+    UBTContract = (await UBTFactory.deploy(
+      ubtMockAddress
+    )) as BaseledgerUBTSplitter;
     await UBTContract.deployed();
     UBTAddress = UBTContract.address;
     // Transfer tokens to account which will make a deposit to the contract through deposit
@@ -717,7 +719,7 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+      expect(await UBTContract.ubtNotReleasedInPreviousPeriods()).to.equal(
         formatTokens("20")
       );
 
@@ -763,7 +765,7 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+      expect(await UBTContract.ubtNotReleasedInPreviousPeriods()).to.equal(
         formatTokens("20")
       );
 
@@ -815,7 +817,7 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+      expect(await UBTContract.ubtNotReleasedInPreviousPeriods()).to.equal(
         formatTokens("20")
       );
 
@@ -841,7 +843,7 @@ describe("UBTSplitter contract tests", () => {
       );
 
       // 40 - 19.2 - 12.8
-      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+      expect(await UBTContract.ubtNotReleasedInPreviousPeriods()).to.equal(
         formatTokens("8")
       );
 
@@ -880,7 +882,7 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+      expect(await UBTContract.ubtNotReleasedInPreviousPeriods()).to.equal(
         formatTokens("0")
       );
 
@@ -926,7 +928,7 @@ describe("UBTSplitter contract tests", () => {
         destinationAddress
       );
 
-      expect(await UBTContract.ubtNotReleasedInLastPeriods()).to.equal(
+      expect(await UBTContract.ubtNotReleasedInPreviousPeriods()).to.equal(
         formatTokens("0")
       );
 

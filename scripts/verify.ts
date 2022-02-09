@@ -4,14 +4,14 @@ export async function verifyContracts(
   contractAddress: string,
   token: string
 ): Promise<void> {
-  // verify UBTSplitter contract
+  // verify BaseledgerUBTSplitter contract
   try {
     await hre.run("verify:verify", {
       address: contractAddress,
       constructorArguments: [token],
     });
   } catch (error: any) {
-    logError("UBTSplitter", error.message);
+    logError("BaseledgerUBTSplitter", error.message);
   }
 }
 

@@ -35,13 +35,11 @@ contract BaseledgerUBTSplitter is Context, Ownable {
     );
 
     event PayeeUpdated(
-        address token,
-        address revenueAddress,
+        address indexed token,
+        address indexed revenueAddress,
         string baseledgerValidatorAddress,
         uint256 shares,
-        uint256 lastEventNonce,
-        address stakingAddress,
-        uint256 timestamp
+        uint256 lastEventNonce
     );
 
     event UbtPaymentReleased(
@@ -196,9 +194,7 @@ contract BaseledgerUBTSplitter is Context, Ownable {
             revenueAddress,
             baseledgerValidatorAddress,
             shares_,
-            lastEventNonce,
-            stakingAddress,
-            block.timestamp
+            lastEventNonce
         );
     }
 
@@ -235,9 +231,7 @@ contract BaseledgerUBTSplitter is Context, Ownable {
             revenueAddress,
             baseledgerValidatorAddress,
             shares_,
-            lastEventNonce,
-            stakingAddress,
-            block.timestamp
+            lastEventNonce
         );
     }
 

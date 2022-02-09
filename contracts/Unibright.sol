@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (finance/UBTSplitter.sol)
+// OpenZeppelin Contracts v4.4.1 (finance/BaseledgerUBTSplitter .sol)
 
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title UBTSplitter
+ * @title BaseledgerUBTSplitter 
  * @dev This contract allows to split UBT payments among a group of accounts. The sender does not need to be aware
  * that the UBT will be split in this way, since it is handled transparently by the contract.
  * Contract is based on PaymentSplitter, but difference is that in PaymentSplitter payees are added only once in constructor,
@@ -19,11 +19,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * account to a number of shares. Of all the UBT that this contract receives, each account will then be able to claim
  * an amount proportional to the percentage of total shares they were assigned.
  *
- * `UBTSplitter` follows a _pull payment_ model. This means that payments are not automatically forwarded to the
+ * `BaseledgerUBTSplitter ` follows a _pull payment_ model. This means that payments are not automatically forwarded to the
  * accounts but kept in this contract, and the actual transfer is triggered as a separate step by calling the {release}
  * function.
  */
-contract UBTSplitter is Context, Ownable {
+contract BaseledgerUBTSplitter  is Context, Ownable {
     event PayeeAdded(
         address revenueAddress,
         address stakingAddress,
@@ -70,13 +70,13 @@ contract UBTSplitter is Context, Ownable {
     mapping(uint256 => mapping (address => uint256)) public ubtReleasedPerRecipientInPeriods;
     
     uint256 public ubtToBeReleasedInPeriod;
-    uint256 public ubtNotReleasedInLastPeriods;
+    uint256 public ubtNotReleasedInPreviousPeriods;
     uint256 public ubtCurrentPeriod;
 
-    address public whitelistedToken;
+    address public ubtTokenContractAddress;
 
     constructor(address token) {
-        whitelistedToken = token;
+        ubtTokenContractAddress = token;
     }
 
     /**
@@ -115,11 +115,11 @@ contract UBTSplitter is Context, Ownable {
         lastEventNonce += 1;
         ubtToBeReleasedInPeriod += amount;
 
-        IERC20(whitelistedToken).transferFrom(msg.sender, address(this), amount);
+        IERC20(ubtTokenContractAddress).transferFrom(msg.sender, address(this), amount);
 
         emit UbtDeposited(
             msg.sender,
-            whitelistedToken,
+            ubtTokenContractAddress,
             amount,
             lastEventNonce,
             baseledgerDestinationAddress
@@ -141,7 +141,7 @@ contract UBTSplitter is Context, Ownable {
         );
    
         uint256 alreadyReceivedSinceLastPayeeUpdate = ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][msg.sender];
-        uint256 toBeReleased = ubtToBeReleasedInPeriod + ubtNotReleasedInLastPeriods;
+        uint256 toBeReleased = ubtToBeReleasedInPeriod + ubtNotReleasedInPreviousPeriods;
         uint256 payment = (shares[msg.sender] * toBeReleased) / totalShares - alreadyReceivedSinceLastPayeeUpdate;
 
         ubtReleased[msg.sender] += payment;
@@ -149,10 +149,10 @@ contract UBTSplitter is Context, Ownable {
         ubtReleasedPerRecipientInPeriods[ubtCurrentPeriod][msg.sender] += payment;
 
         require(payment != 0, "msg.sender is not due payment");
-        IERC20(whitelistedToken).transfer(msg.sender, payment);
+        IERC20(ubtTokenContractAddress).transfer(msg.sender, payment);
 
         emit UbtPaymentReleased(
-            IERC20(whitelistedToken),
+            IERC20(ubtTokenContractAddress),
             msg.sender,
             stakingAddresses[msg.sender],
             payment
@@ -247,6 +247,6 @@ contract UBTSplitter is Context, Ownable {
 
         ubtToBeReleasedInPeriod = 0;
         ubtCurrentPeriod += 1;
-        ubtNotReleasedInLastPeriods = IERC20(whitelistedToken).balanceOf(address(this));
+        ubtNotReleasedInPreviousPeriods = IERC20(ubtTokenContractAddress).balanceOf(address(this));
     }
 }

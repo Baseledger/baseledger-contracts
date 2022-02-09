@@ -1,8 +1,8 @@
 import hre from "hardhat";
 import { ContractFactory } from "ethers";
-import { UBTSplitter } from "../typechain";
+import { BaseledgerUBTSplitter } from "../typechain";
 
-export async function deployContracts(whitelistedToken: string) {
+export async function deployContracts(ubtTokenContractAddress: string) {
   await hre.run("compile");
   const [deployer] = await hre.ethers.getSigners();
 
@@ -11,12 +11,14 @@ export async function deployContracts(whitelistedToken: string) {
     `Account balance: ${(await deployer.getBalance()).toString()} \n`
   );
 
-  const UBTSplitterFactory: ContractFactory =
-    await hre.ethers.getContractFactory("UBTSplitter");
+  const BaseledgerUBTSplitterFactory: ContractFactory =
+    await hre.ethers.getContractFactory("BaseledgerUBTSplitter");
 
-  const UBTSplitter = (await UBTSplitterFactory.deploy(
-    whitelistedToken
-  )) as UBTSplitter;
-  await UBTSplitter.deployed();
-  console.log(`Unibright contract deployed at: ${UBTSplitter.address}`);
+  const BaseledgerUBTSplitter = (await BaseledgerUBTSplitterFactory.deploy(
+    ubtTokenContractAddress
+  )) as BaseledgerUBTSplitter;
+  await BaseledgerUBTSplitter.deployed();
+  console.log(
+    `Unibright contract deployed at: ${BaseledgerUBTSplitter.address}`
+  );
 }

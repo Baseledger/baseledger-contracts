@@ -6,7 +6,6 @@ import {
   tenTokens,
   zeroAddress,
   shares,
-  getTimestamp,
   zeroToken,
   fiveTokens,
   threePointThreeInPeriodTokens,
@@ -94,11 +93,11 @@ describe("BaseledgerUBTSplitter contract tests", () => {
       )
         .to.emit(UBTContract, "UbtDeposited")
         .withArgs(
-          tokenSenderAddress,
           ubtMockAddress,
+          tokenSenderAddress,
+          destinationAddress,
           tenTokens,
-          firstDepositNonce,
-          destinationAddress
+          firstDepositNonce
         );
       const contractBalance = await ubtMock.balanceOf(UBTAddress);
       expect(contractBalance).to.equal(tenTokens);
@@ -122,7 +121,6 @@ describe("BaseledgerUBTSplitter contract tests", () => {
 
   context("For adding validators", async () => {
     it("Should add validator with share", async () => {
-      const timestamp = (await getTimestamp()) + 1;
       const depositNonce = (await UBTContract.lastEventNonce()).add(1);
 
       expect(
@@ -133,14 +131,13 @@ describe("BaseledgerUBTSplitter contract tests", () => {
           baseledgervaloper
         )
       )
-        .to.emit(UBTContract, "PayeeAdded")
+        .to.emit(UBTContract, "PayeeUpdated")
         .withArgs(
+          ubtMockAddress,
           revenue1Address,
-          stakingAddress,
-          shares.fifty,
           baseledgervaloper,
-          depositNonce,
-          timestamp
+          shares.fifty,
+          depositNonce
         );
       expect(await UBTContract.payees(revenue1Address)).to.equal(true);
       expect(await UBTContract.shares(revenue1Address)).to.equal(shares.fifty);
@@ -247,7 +244,6 @@ describe("BaseledgerUBTSplitter contract tests", () => {
       );
     });
     it("Should update validator with share", async () => {
-      const timestamp = (await getTimestamp()) + 1;
       const depositNonce = (await UBTContract.lastEventNonce()).add(1);
 
       expect(
@@ -260,12 +256,11 @@ describe("BaseledgerUBTSplitter contract tests", () => {
       )
         .to.emit(UBTContract, "PayeeUpdated")
         .withArgs(
+          ubtMockAddress,
           revenue1Address,
-          stakingAddress,
-          shares.hundred,
           baseledgervaloper,
-          depositNonce,
-          timestamp
+          shares.hundred,
+          depositNonce
         );
       expect(await UBTContract.payees(revenue1Address)).to.equal(true);
       expect(await UBTContract.payees(revenue2Address)).to.equal(true);

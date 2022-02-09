@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { ContractFactory } from "ethers";
-import { UBTSplitter, UBTMock } from "../typechain";
+import { BaseledgerUBTSplitter, UBTMock } from "../typechain";
 
 // deploy both mock erc20 and ubt splitter contracts for development purpose
 export async function deployContractsDev() {
@@ -21,15 +21,17 @@ export async function deployContractsDev() {
 
   console.log(`UBT Mock erc20 contract deployed at ${UBTMock.address}`);
 
-  const UBTSplitterFactory: ContractFactory =
-    await hre.ethers.getContractFactory("UBTSplitter");
+  const BaseledgerUBTSplitterFactory: ContractFactory =
+    await hre.ethers.getContractFactory("BaseledgerUBTSplitter");
 
-  const UBTSplitter = (await UBTSplitterFactory.deploy(
+  const BaseledgerUBTSplitter = (await BaseledgerUBTSplitterFactory.deploy(
     UBTMock.address
-  )) as UBTSplitter;
-  await UBTSplitter.deployed();
-  console.log(`Unibright contract deployed at: ${UBTSplitter.address}`);
+  )) as BaseledgerUBTSplitter;
+  await BaseledgerUBTSplitter.deployed();
+  console.log(
+    `Unibright contract deployed at: ${BaseledgerUBTSplitter.address}`
+  );
 
   console.log(`Approving 100 tokens for dev purpose to ${deployer.address}`);
-  await UBTMock.approve(UBTSplitter.address, 100);
+  await UBTMock.approve(BaseledgerUBTSplitter.address, 100);
 }

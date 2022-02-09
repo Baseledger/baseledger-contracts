@@ -24,16 +24,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * function.
  */
 contract BaseledgerUBTSplitter is Context, Ownable {
-    event PayeeAdded(
-        address token,
-        address revenueAddress,
-        string baseledgerValidatorAddress,
-        uint256 shares,
-        uint256 lastEventNonce,
-        address stakingAddress,
-        uint256 timestamp
-    );
-
     event PayeeUpdated(
         address indexed token,
         address indexed revenueAddress,
@@ -117,7 +107,7 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         );
 
         emit UbtDeposited(
-            whitelistedToken,
+            ubtTokenContractAddress,
             msg.sender,
             baseledgerDestinationAddress,
             amount,
@@ -189,8 +179,8 @@ contract BaseledgerUBTSplitter is Context, Ownable {
             shares_
         );
 
-        emit PayeeAdded(
-            whitelistedToken,
+        emit PayeeUpdated(
+            ubtTokenContractAddress,
             revenueAddress,
             baseledgerValidatorAddress,
             shares_,
@@ -227,7 +217,7 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         );
 
         emit PayeeUpdated(
-            whitelistedToken,
+            ubtTokenContractAddress,
             revenueAddress,
             baseledgerValidatorAddress,
             shares_,

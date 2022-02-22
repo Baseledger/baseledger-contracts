@@ -36,3 +36,9 @@ const baseledger = await Baseledger.attach("0xe7f1725E7734CE288F8367e1Bb143E90bb
 
 await baseledger.deposit(1, COSMOS_WALLET_ADDRESS)
 ```
+
+# Build docker image for integration testing of baseledger
+
+```shell
+docker build -t baseledger-hardhat .
+```

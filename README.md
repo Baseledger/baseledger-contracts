@@ -31,7 +31,7 @@ npm run contracts:migrate:local
 ```shell
 npx hardhat console --network localhost
 
-const Baseledger = await ethers.getContractFactory("UBTSplitter")
+const Baseledger = await ethers.getContractFactory("BaseledgerUBTSplitter")
 const baseledger = await Baseledger.attach("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512")
 
 await baseledger.deposit(1, COSMOS_WALLET_ADDRESS)

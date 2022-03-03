@@ -11,6 +11,8 @@ import {
   fiveTokens,
   threePointThreeInPeriodTokens,
   formatTokens,
+  oneToken,
+  twoPointFiveTokens,
 } from "./utils";
 import { Signer } from "ethers";
 
@@ -77,6 +79,61 @@ describe("BaseledgerUBTSplitter contract tests", () => {
       expect(contractBalance).to.equal(zeroToken);
     });
 
+    it("Should have min deposit set to 1 UBT initialy", async () => {
+      const minDeposit = await UBTContract.minDeposit();
+      expect(minDeposit).to.equal(oneToken);
+    });
+
+    it("Should change min deposit through changeMinDeposit", async () => {
+      const tx = await UBTContract.changeMinDeposit(fiveTokens);
+      await tx.wait();
+
+      const minDeposit = await UBTContract.minDeposit();
+      expect(minDeposit).to.equal(fiveTokens);
+    });
+
+    it("Should fail on changeMinDeposit to zero", async () => {
+      await expect(UBTContract.changeMinDeposit(zeroToken)).to.be.revertedWith(
+        "min deposit must be > 0"
+      );
+    });
+
+    it("Should fail if malicious account tries to changeMinDeposit ", async () => {
+      await expect(
+        UBTContract.connect(maliciousAccount).changeMinDeposit(zeroToken)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("Should fail on transfering zero token amount", async () => {
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          zeroToken,
+          destinationAddress
+        )
+      ).to.be.revertedWith("amount should be above min deposit");
+    });
+
+    it("Should fail on transfer less than min deposit amount", async () => {
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          zeroPointOneToken,
+          destinationAddress
+        )
+      ).to.be.revertedWith("amount should be above min deposit");
+    });
+
+    it("Should fail on transfer less than min deposit amount, after in deposit has been changed", async () => {
+      const tx = await UBTContract.changeMinDeposit(fiveTokens);
+      await tx.wait();
+      
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          twoPointFiveTokens,
+          destinationAddress
+        )
+      ).to.be.revertedWith("amount should be above min deposit");
+    });
+
     it("Should deposit tokens through deposit function, emit deposit event and check balance of contract", async () => {
       const accountBalance = await ubtMock.balanceOf(tokenSenderAddress);
       expect(accountBalance).to.equal(tenTokens);
@@ -108,24 +165,6 @@ describe("BaseledgerUBTSplitter contract tests", () => {
       await expect(
         UBTContract.connect(tokenSenderAccount).deposit(tenTokens, "")
       ).to.be.revertedWith("string is empty");
-    });
-
-    it("Should fail on transfer zero token amount", async () => {
-      await expect(
-        UBTContract.connect(tokenSenderAccount).deposit(
-          zeroToken,
-          destinationAddress
-        )
-      ).to.be.revertedWith("amount should be >= 1");
-    });
-
-    it("Should fail on transfer less than one token amount", async () => {
-      await expect(
-        UBTContract.connect(tokenSenderAccount).deposit(
-          zeroPointOneToken,
-          destinationAddress
-        )
-      ).to.be.revertedWith("amount should be >= 1");
     });
   });
 

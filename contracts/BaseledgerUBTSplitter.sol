@@ -66,6 +66,8 @@ contract BaseledgerUBTSplitter is Context, Ownable {
 
     address public ubtTokenContractAddress;
 
+    uint256 public minDeposit = 100000000;
+
     constructor(address token) {
         ubtTokenContractAddress = token;
     }
@@ -96,7 +98,7 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         public
         emptyString(baseledgerDestinationAddress)
     {
-        require(amount >= 100000000, "amount should be >= 1");
+        require(amount >= minDeposit, "amount should be above min deposit");
         lastEventNonce += 1;
         ubtToBeReleasedInPeriod += amount;
 
@@ -223,6 +225,16 @@ contract BaseledgerUBTSplitter is Context, Ownable {
             shares_,
             lastEventNonce
         );
+    }
+
+    /**
+     * @dev Change the minimum required UBT deposit.
+     * @param minDeposit_ The new amount of minimum deposit
+     */
+    function changeMinDeposit(uint256 minDeposit_) public onlyOwner {
+        require(minDeposit_ > 0, "min deposit must be > 0");
+
+        minDeposit = minDeposit_;
     }
 
     function _updatePayeeSharesAndCurrentPeriod(

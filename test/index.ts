@@ -122,7 +122,7 @@ describe("BaseledgerUBTSplitter contract tests", () => {
       ).to.be.revertedWith("amount should be above min deposit");
     });
 
-    it("Should fail on transfer less than min deposit amount, after in deposit has been changed", async () => {
+    it("Should fail on transfer less than min deposit amount, after min deposit has been changed", async () => {
       const tx = await UBTContract.changeMinDeposit(fiveTokens);
       await tx.wait();
       

@@ -96,7 +96,7 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         public
         emptyString(baseledgerDestinationAddress)
     {
-        require(amount > 0, "amount should be greater than zero");
+        require(amount >= 100000000, "amount should be >= 1");
         lastEventNonce += 1;
         ubtToBeReleasedInPeriod += amount;
 

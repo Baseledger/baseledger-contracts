@@ -7,6 +7,7 @@ import {
   zeroAddress,
   shares,
   zeroToken,
+  zeroPointOneToken,
   fiveTokens,
   threePointThreeInPeriodTokens,
   formatTokens,
@@ -115,7 +116,16 @@ describe("BaseledgerUBTSplitter contract tests", () => {
           zeroToken,
           destinationAddress
         )
-      ).to.be.revertedWith("amount should be greater than zero");
+      ).to.be.revertedWith("amount should be >= 1");
+    });
+
+    it("Should fail on transfer less than one token amount", async () => {
+      await expect(
+        UBTContract.connect(tokenSenderAccount).deposit(
+          zeroPointOneToken,
+          destinationAddress
+        )
+      ).to.be.revertedWith("amount should be >= 1");
     });
   });
 
@@ -644,7 +654,7 @@ describe("BaseledgerUBTSplitter contract tests", () => {
 
       // second got 20 in first release, 6.6666... in second (40 * 20 / 120)
       expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
-        formatTokens("26.666666666666666666")
+        formatTokens("26.66666666")
       );
 
       // third got only 3.333... in second release (20 * 20 / 120)
@@ -726,12 +736,12 @@ describe("BaseledgerUBTSplitter contract tests", () => {
 
       // 30 + 60 * 40 / 85
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
-        formatTokens("58.235294117647058823")
+        formatTokens("58.23529411")
       );
 
       // 0 + 25 * 40 / 85
       expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
-        formatTokens("11.764705882352941176")
+        formatTokens("11.76470588")
       );
     });
 
@@ -847,7 +857,7 @@ describe("BaseledgerUBTSplitter contract tests", () => {
       // 3rd only releases after 2 updates
       // 0 + 20 * 8 / 120
       expect(await UBTContract.ubtReleased(revenue3Address)).to.equal(
-        formatTokens("1.333333333333333333")
+        formatTokens("1.33333333")
       );
     });
 
@@ -888,12 +898,12 @@ describe("BaseledgerUBTSplitter contract tests", () => {
 
       // 30 + 60 * 20 / 85
       expect(await UBTContract.ubtReleased(revenue1Address)).to.equal(
-        formatTokens("44.117647058823529411")
+        formatTokens("44.11764705")
       );
 
       // 20 + 25 * 20 / 85
       expect(await UBTContract.ubtReleased(revenue2Address)).to.equal(
-        formatTokens("25.882352941176470588")
+        formatTokens("25.88235294")
       );
     });
 

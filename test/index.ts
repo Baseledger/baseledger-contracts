@@ -125,7 +125,7 @@ describe("BaseledgerUBTSplitter contract tests", () => {
     it("Should fail on transfer less than min deposit amount, after min deposit has been changed", async () => {
       const tx = await UBTContract.changeMinDeposit(fiveTokens);
       await tx.wait();
-      
+
       await expect(
         UBTContract.connect(tokenSenderAccount).deposit(
           twoPointFiveTokens,

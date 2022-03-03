@@ -10,8 +10,14 @@ export const tenTokens = ethers.utils.parseUnits("10", 8);
 export const fiveHundred = ethers.utils.parseUnits("500", 8);
 export const thousandTokens = ethers.utils.parseUnits("1000", 8);
 
-export const threePointThreeInPeriodTokens = ethers.utils.parseUnits("3.33333333", 8);
-export const onePointSixInPeriodTokens = ethers.utils.parseUnits("1.66666666", 8);
+export const threePointThreeInPeriodTokens = ethers.utils.parseUnits(
+  "3.33333333",
+  8
+);
+export const onePointSixInPeriodTokens = ethers.utils.parseUnits(
+  "1.66666666",
+  8
+);
 export const shares = {
   zero: 0,
   twenty: 20,

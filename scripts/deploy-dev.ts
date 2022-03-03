@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { ContractFactory } from "ethers";
 import { BaseledgerUBTSplitter, UBTMock } from "../typechain";
+import { fiveHundred } from "../test/utils";
 
 // deploy both mock erc20 and ubt splitter contracts for development purpose
 export async function deployContractsDev() {
@@ -32,6 +33,6 @@ export async function deployContractsDev() {
     `Unibright contract deployed at: ${BaseledgerUBTSplitter.address}`
   );
 
-  console.log(`Approving 100 tokens for dev purpose to ${deployer.address}`);
-  await UBTMock.approve(BaseledgerUBTSplitter.address, 100);
+  console.log(`Approving 500 tokens for dev purpose to ${deployer.address}`);
+  await UBTMock.approve(BaseledgerUBTSplitter.address, fiveHundred);
 }

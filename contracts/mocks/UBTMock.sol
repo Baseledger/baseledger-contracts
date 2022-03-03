@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract UBTMock is ERC20, Ownable {
-    uint256 private constant SUPPLY = 1_000_000_000 * 10**18;
+    uint256 private constant SUPPLY = 1_000_000_000 * 10**8;
 
-    constructor() ERC20("LeagueDAO Governance Token", "LEAG") {
+    constructor() ERC20("UBT Mock Token", "LEAG") {
         _mint(msg.sender, SUPPLY);
     }
 

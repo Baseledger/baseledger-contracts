@@ -34,7 +34,6 @@ describe("BaseledgerUBTSplitter contract tests", () => {
   let tokenSenderAccount: Signer;
   let tokenSenderAddress: string;
   const baseledgervaloper = "Testing String";
-  const firstDepositNonce = 1;
   const thirdDepositNonce = 3;
 
   const destinationAddress = "0x00f10566dD219F4cFb787858B9909A468131DC0B";

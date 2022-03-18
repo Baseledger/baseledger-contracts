@@ -100,7 +100,11 @@ contract BaseledgerUBTSplitter is Context, Ownable {
     {
         require(amount >= minDeposit, "amount should be above min deposit");
         
-        uint256 allowance = IERC20(ubtTokenContractAddress).allowance(msg.sender, address(this));
+        uint256 allowance = IERC20(ubtTokenContractAddress).allowance(
+            msg.sender,
+            address(this)
+        );
+
         require(allowance >= amount, "not enough allowance");
 
         lastEventNonce += 1;

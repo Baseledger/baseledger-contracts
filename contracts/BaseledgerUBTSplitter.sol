@@ -48,7 +48,7 @@ contract BaseledgerUBTSplitter is Context, Ownable {
     );
 
     uint256 public totalShares;
-    uint256 public lastEventNonce;
+    uint256 public lastEventNonce = 2;
 
     mapping(address => uint256) public shares;
     mapping(address => address) public stakingAddresses;
@@ -98,6 +98,9 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         public
         emptyString(baseledgerDestinationAddress)
     {
+        uint256 allowance = IERC20(ubtTokenContractAddress).allowance(msg.sender, address(this));
+        require(allowance >= amount, "not enough allowance");
+
         require(amount >= minDeposit, "amount should be above min deposit");
         lastEventNonce += 1;
         ubtToBeReleasedInPeriod += amount;

@@ -99,23 +99,19 @@ contract BaseledgerUBTSplitter is Context, Ownable {
         emptyString(baseledgerDestinationAddress)
     {
         require(amount >= minDeposit, "amount should be above min deposit");
-
-        uint256 allowance = IERC20(ubtTokenContractAddress).allowance(
-            msg.sender,
-            address(this)
-        );
-
-        require(allowance >= amount, "not enough allowance");
-
         lastEventNonce += 1;
         ubtToBeReleasedInPeriod += amount;
 
-        IERC20(ubtTokenContractAddress).transferFrom(
+        bool transferFromReturn = IERC20(ubtTokenContractAddress).transferFrom(
             msg.sender,
             address(this),
             amount
         );
 
+        require(
+            transferFromReturn == true,
+            "transferFrom fail, check allowance"
+        );
         emit UbtDeposited(
             ubtTokenContractAddress,
             msg.sender,

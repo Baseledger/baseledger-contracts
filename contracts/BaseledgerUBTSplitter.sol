@@ -108,7 +108,10 @@ contract BaseledgerUBTSplitter is Context, Ownable {
             amount
         );
 
-        require (transferFromReturn == true, "transferFrom fail, check allowance");
+        require(
+            transferFromReturn == true,
+            "transferFrom fail, check allowance"
+        );
         emit UbtDeposited(
             ubtTokenContractAddress,
             msg.sender,
